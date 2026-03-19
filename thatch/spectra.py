@@ -20,6 +20,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -38,8 +39,15 @@ os.makedirs(FIGDIR, exist_ok=True)
 
 # Spectroscopic instrument/grating configurations
 STIS_GRATINGS = [
-    "G140L", "G140M", "G230L", "G230LB", "G230MB",
-    "G430L", "G430M", "G750L", "G750M",
+    "G140L",
+    "G140M",
+    "G230L",
+    "G230LB",
+    "G230MB",
+    "G430L",
+    "G430M",
+    "G750L",
+    "G750M",
 ]
 WFC3_GRISMS = ["G102", "G141", "G280"]
 ACS_GRISMS = ["G800L"]
@@ -104,24 +112,28 @@ def query_spectroscopic_obs(coord, radius=5.0, name="transient"):
         else:
             mode = "unknown"
 
-        records.append({
-            "obs_id": str(row["obs_id"]),
-            "mjd": mjd_mid,
-            "grating": filt,
-            "instrument": instrument,
-            "mode": mode,
-            "proposal_id": str(row["proposal_id"]),
-            "exptime_s": exptime,
-            "dataproduct_type": dtype,
-        })
+        records.append(
+            {
+                "obs_id": str(row["obs_id"]),
+                "mjd": mjd_mid,
+                "grating": filt,
+                "instrument": instrument,
+                "mode": mode,
+                "proposal_id": str(row["proposal_id"]),
+                "exptime_s": exptime,
+                "dataproduct_type": dtype,
+            }
+        )
 
     df = pd.DataFrame(records).sort_values("mjd")
     print(f"  Found {len(df)} spectroscopic observations")
     if len(df) > 0:
         for _, row in df.iterrows():
-            print(f"    {row['mode']:12s} {row['grating']:10s} "
-                  f"MJD={row['mjd']:.1f} {row['instrument']:14s} "
-                  f"prog={row['proposal_id']} {row['obs_id']}")
+            print(
+                f"    {row['mode']:12s} {row['grating']:10s} "
+                f"MJD={row['mjd']:.1f} {row['instrument']:14s} "
+                f"prog={row['proposal_id']} {row['obs_id']}"
+            )
     return df
 
 
@@ -160,13 +172,18 @@ def download_extracted_spectra(obs_df, outdir, max_download=50):
     products = Observations.get_product_list(obs_table)
 
     # Filter to extracted 1D spectra (STIS/COS x1d, plus HAP grism extractions)
-    spec_extensions = ["_x1d.fits", "_sx1.fits", "_x1dsum.fits",
-                       "_x2d.fits", "_sx2.fits",
-                       "_1d.fits", "_opt.fits"]  # HAP grism extractions
-    spec_mask = np.array([
-        any(ext in str(pn) for ext in spec_extensions)
-        for pn in products["productFilename"]
-    ])
+    spec_extensions = [
+        "_x1d.fits",
+        "_sx1.fits",
+        "_x1dsum.fits",
+        "_x2d.fits",
+        "_sx2.fits",
+        "_1d.fits",
+        "_opt.fits",
+    ]  # HAP grism extractions
+    spec_mask = np.array(
+        [any(ext in str(pn) for ext in spec_extensions) for pn in products["productFilename"]]
+    )
     spec_products = products[spec_mask]
 
     print(f"  Found {len(spec_products)} extracted spectral products")
@@ -174,10 +191,12 @@ def download_extracted_spectra(obs_df, outdir, max_download=50):
     if len(spec_products) == 0:
         # For grism data, try getting the direct + grism images
         print("  No pipeline-extracted spectra. Trying grism images...")
-        grism_mask = np.array([
-            any(ext in str(pn) for ext in ["_flt.fits", "_flc.fits", "_drz.fits"])
-            for pn in products["productFilename"]
-        ])
+        grism_mask = np.array(
+            [
+                any(ext in str(pn) for ext in ["_flt.fits", "_flc.fits", "_drz.fits"])
+                for pn in products["productFilename"]
+            ]
+        )
         spec_products = products[grism_mask]
         print(f"  Found {len(spec_products)} grism image products")
 
@@ -188,12 +207,13 @@ def download_extracted_spectra(obs_df, outdir, max_download=50):
     if len(spec_products) == 0:
         return []
 
-    manifest = Observations.download_products(
-        spec_products, download_dir=outdir, flat=True
-    )
+    manifest = Observations.download_products(spec_products, download_dir=outdir, flat=True)
 
-    downloaded = [str(row["Local Path"]) for _, row in manifest.to_pandas().iterrows()
-                  if str(row["Status"]) == "COMPLETE"]
+    downloaded = [
+        str(row["Local Path"])
+        for _, row in manifest.to_pandas().iterrows()
+        if str(row["Status"]) == "COMPLETE"
+    ]
     print(f"  Downloaded {len(downloaded)} files")
     return downloaded
 
@@ -225,14 +245,12 @@ def read_x1d_spectrum(fpath):
 
         # Get MJD: try EXPSTART from ext 1 first, then DATE-OBS from either
         ext1_header = hdul[1].header if len(hdul) > 1 else {}
-        expstart = (ext1_header.get("EXPSTART") or pri.get("EXPSTART"))
+        expstart = ext1_header.get("EXPSTART") or pri.get("EXPSTART")
         if expstart is not None:
             mjd = float(expstart)
         else:
-            date_obs = (ext1_header.get("DATE-OBS") or
-                        pri.get("DATE-OBS", ""))
-            time_obs = (ext1_header.get("TIME-OBS") or
-                        pri.get("TIME-OBS", "00:00:00"))
+            date_obs = ext1_header.get("DATE-OBS") or pri.get("DATE-OBS", "")
+            time_obs = ext1_header.get("TIME-OBS") or pri.get("TIME-OBS", "00:00:00")
             try:
                 t = Time(f"{date_obs}T{time_obs}", format="isot", scale="utc")
                 mjd = t.mjd
@@ -324,10 +342,12 @@ def process_spectral_directory(specdir):
             spec = read_x1d_spectrum(fpath)
             if spec is not None:
                 spectra.append(spec)
-                print(f"  {fname}: {spec['grating']} "
-                      f"MJD={spec['mjd']:.3f} "
-                      f"{spec['wave_min']:.0f}-{spec['wave_max']:.0f}A "
-                      f"({spec['n_pixels']} px)")
+                print(
+                    f"  {fname}: {spec['grating']} "
+                    f"MJD={spec['mjd']:.3f} "
+                    f"{spec['wave_min']:.0f}-{spec['wave_max']:.0f}A "
+                    f"({spec['n_pixels']} px)"
+                )
             else:
                 print(f"  {fname}: no valid data")
         except Exception as e:
@@ -359,12 +379,9 @@ def save_spectra_hdf5(spectra, outpath, object_name="transient"):
 
         for i, spec in enumerate(spectra):
             grp = f.create_group(f"spec_{i:03d}")
-            grp.create_dataset("wavelength", data=spec["wavelength"],
-                               compression="gzip")
-            grp.create_dataset("flux", data=spec["flux"],
-                               compression="gzip")
-            grp.create_dataset("flux_err", data=spec["flux_err"],
-                               compression="gzip")
+            grp.create_dataset("wavelength", data=spec["wavelength"], compression="gzip")
+            grp.create_dataset("flux", data=spec["flux"], compression="gzip")
+            grp.create_dataset("flux_err", data=spec["flux_err"], compression="gzip")
 
             grp.attrs["filename"] = spec["filename"]
             grp.attrs["mjd"] = spec["mjd"] if np.isfinite(spec["mjd"]) else 0.0
@@ -395,12 +412,13 @@ def save_spectra_to_fits(spectra, outpath):
     hdul = fits.HDUList([fits.PrimaryHDU()])
 
     for i, spec in enumerate(spectra):
-        col_wave = fits.Column(name="WAVELENGTH", format="D",
-                               unit="Angstrom", array=spec["wavelength"])
-        col_flux = fits.Column(name="FLUX", format="D",
-                               unit="erg/s/cm2/A", array=spec["flux"])
-        col_err = fits.Column(name="FLUX_ERR", format="D",
-                              unit="erg/s/cm2/A", array=spec["flux_err"])
+        col_wave = fits.Column(
+            name="WAVELENGTH", format="D", unit="Angstrom", array=spec["wavelength"]
+        )
+        col_flux = fits.Column(name="FLUX", format="D", unit="erg/s/cm2/A", array=spec["flux"])
+        col_err = fits.Column(
+            name="FLUX_ERR", format="D", unit="erg/s/cm2/A", array=spec["flux_err"]
+        )
 
         table = fits.BinTableHDU.from_columns([col_wave, col_flux, col_err])
         table.header["EXTNAME"] = f"SPEC_{i:03d}"
@@ -437,27 +455,31 @@ def save_spectra_to_csv(spectra, outdir, prefix="spectrum"):
     summary_records = []
     for i, spec in enumerate(spectra):
         # Save individual spectrum
-        spec_df = pd.DataFrame({
-            "wavelength_A": spec["wavelength"],
-            "flux_erg_s_cm2_A": spec["flux"],
-            "flux_err_erg_s_cm2_A": spec["flux_err"],
-        })
+        spec_df = pd.DataFrame(
+            {
+                "wavelength_A": spec["wavelength"],
+                "flux_erg_s_cm2_A": spec["flux"],
+                "flux_err_erg_s_cm2_A": spec["flux_err"],
+            }
+        )
         spec_fname = f"{prefix}_{i:03d}_{spec['grating']}_MJD{spec['mjd']:.1f}.csv"
         spec_df.to_csv(os.path.join(outdir, spec_fname), index=False)
 
         # Summary record
-        summary_records.append({
-            "filename": spec["filename"],
-            "spectrum_file": spec_fname,
-            "mjd": spec["mjd"],
-            "instrument": spec["instrument"],
-            "grating": spec["grating"],
-            "exptime_s": spec["exptime_s"],
-            "proposal_id": spec["proposal_id"],
-            "wave_min_A": spec["wave_min"],
-            "wave_max_A": spec["wave_max"],
-            "n_pixels": spec["n_pixels"],
-        })
+        summary_records.append(
+            {
+                "filename": spec["filename"],
+                "spectrum_file": spec_fname,
+                "mjd": spec["mjd"],
+                "instrument": spec["instrument"],
+                "grating": spec["grating"],
+                "exptime_s": spec["exptime_s"],
+                "proposal_id": spec["proposal_id"],
+                "wave_min_A": spec["wave_min"],
+                "wave_max_A": spec["wave_max"],
+                "n_pixels": spec["n_pixels"],
+            }
+        )
 
     summary_df = pd.DataFrame(summary_records)
     summary_path = os.path.join(outdir, f"{prefix}_summary.csv")
@@ -507,8 +529,8 @@ def plot_spectra(spectra, mjd_ref=None, title="HST Spectra", outpath=None):
         if len(wave) > 500:
             bin_size = max(1, len(wave) // 500)
             n_bins = len(wave) // bin_size
-            wave = wave[:n_bins * bin_size].reshape(n_bins, bin_size).mean(axis=1)
-            flux = flux[:n_bins * bin_size].reshape(n_bins, bin_size).mean(axis=1)
+            wave = wave[: n_bins * bin_size].reshape(n_bins, bin_size).mean(axis=1)
+            flux = flux[: n_bins * bin_size].reshape(n_bins, bin_size).mean(axis=1)
 
         ax.plot(wave, flux, color=color, alpha=0.8, lw=0.8, label=label)
 
@@ -528,8 +550,7 @@ def plot_spectra(spectra, mjd_ref=None, title="HST Spectra", outpath=None):
         plt.show()
 
 
-def plot_spectral_sequence(spectra, mjd_ref, title="Spectral Sequence",
-                           outpath=None):
+def plot_spectral_sequence(spectra, mjd_ref, title="Spectral Sequence", outpath=None):
     """Plot spectra offset vertically by epoch — classic SN spectral sequence.
 
     Parameters
@@ -566,13 +587,13 @@ def plot_spectral_sequence(spectra, mjd_ref, title="Spectral Sequence",
         if len(wave) > 500:
             bin_size = max(1, len(wave) // 500)
             n_bins = len(wave) // bin_size
-            wave = wave[:n_bins * bin_size].reshape(n_bins, bin_size).mean(axis=1)
-            flux_norm = flux_norm[:n_bins * bin_size].reshape(n_bins, bin_size).mean(axis=1)
+            wave = wave[: n_bins * bin_size].reshape(n_bins, bin_size).mean(axis=1)
+            flux_norm = flux_norm[: n_bins * bin_size].reshape(n_bins, bin_size).mean(axis=1)
 
         ax.plot(wave, flux_norm + offset, lw=0.8, alpha=0.9)
-        ax.text(wave[-1] + 50, offset + 1.0,
-                f"+{dt:.1f}d ({spec['grating']})",
-                fontsize=7, va="center")
+        ax.text(
+            wave[-1] + 50, offset + 1.0, f"+{dt:.1f}d ({spec['grating']})", fontsize=7, va="center"
+        )
 
         offset += 2.0
 
@@ -612,9 +633,7 @@ def demo_at2017gfo():
     # Step 1: Query for spectroscopic observations
     print("\n--- Step 1: Query spectroscopic observations ---")
     try:
-        obs_df = query_spectroscopic_obs(
-            AT2017GFO_COORD, radius=5.0, name="AT2017gfo"
-        )
+        obs_df = query_spectroscopic_obs(AT2017GFO_COORD, radius=5.0, name="AT2017gfo")
         if len(obs_df) > 0:
             obs_df["delta_t_days"] = obs_df["mjd"] - MJD_GW170817
             log_path = os.path.join(specdir, "spectroscopic_obs_log.csv")
@@ -650,10 +669,7 @@ def demo_at2017gfo():
     # Step 4: Save standardized output
     print("\n--- Step 4: Save standardized spectra ---")
     save_spectra_to_csv(spectra, specdir, prefix="AT2017gfo")
-    save_spectra_to_fits(
-        spectra,
-        os.path.join(specdir, "AT2017gfo_spectra.fits")
-    )
+    save_spectra_to_fits(spectra, os.path.join(specdir, "AT2017gfo_spectra.fits"))
 
     # Step 5: Plot
     print("\n--- Step 5: Plot spectra ---")
@@ -675,9 +691,11 @@ def demo_at2017gfo():
     print(f"  Spectra extracted: {len(spectra)}")
     for s in spectra:
         dt = s["mjd"] - MJD_GW170817
-        print(f"    {s['grating']:8s} dt={dt:+7.1f}d  "
-              f"{s['wave_min']:.0f}-{s['wave_max']:.0f}A  "
-              f"{s['instrument']}")
+        print(
+            f"    {s['grating']:8s} dt={dt:+7.1f}d  "
+            f"{s['wave_min']:.0f}-{s['wave_max']:.0f}A  "
+            f"{s['instrument']}"
+        )
 
     return spectra
 
@@ -704,9 +722,7 @@ def demo_sn2011fe():
     # Step 1: Query
     print("\n--- Step 1: Query spectroscopic observations ---")
     try:
-        obs_df = query_spectroscopic_obs(
-            SN2011FE_COORD, radius=3.0, name="SN 2011fe"
-        )
+        obs_df = query_spectroscopic_obs(SN2011FE_COORD, radius=3.0, name="SN 2011fe")
         if len(obs_df) > 0:
             obs_df["delta_t_days"] = obs_df["mjd"] - MJD_BMAX_2011FE
             log_path = os.path.join(specdir, "spectroscopic_obs_log.csv")
@@ -735,10 +751,7 @@ def demo_sn2011fe():
     # Step 4: Save
     print("\n--- Step 4: Save standardized spectra ---")
     save_spectra_to_csv(spectra, specdir, prefix="SN2011fe")
-    save_spectra_to_fits(
-        spectra,
-        os.path.join(specdir, "SN2011fe_spectra.fits")
-    )
+    save_spectra_to_fits(spectra, os.path.join(specdir, "SN2011fe_spectra.fits"))
 
     # Step 5: Plot
     print("\n--- Step 5: Plot spectra ---")

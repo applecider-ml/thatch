@@ -10,8 +10,8 @@ Usage:
 
 import os
 import numpy as np
-import pandas as pd
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from glob import glob
@@ -29,11 +29,16 @@ def load_xshooter_spectra(specdir):
     spectra = []
     # Map filenames to dates (MJD of Aug 17 = 57982.529)
     date_map = {
-        "XSGW0818": 57983.5, "G298048_XSH_20170819": 57984.5,
-        "XSGW0820": 57985.5, "G298048_XSH_20170821": 57986.5,
-        "XSGW0822": 57987.5, "XSGW0823": 57988.5,
-        "XSGW0824": 57989.5, "XSGW0825": 57990.5,
-        "XSGW0826": 57991.5, "XSGW0827": 57992.5,
+        "XSGW0818": 57983.5,
+        "G298048_XSH_20170819": 57984.5,
+        "XSGW0820": 57985.5,
+        "G298048_XSH_20170821": 57986.5,
+        "XSGW0822": 57987.5,
+        "XSGW0823": 57988.5,
+        "XSGW0824": 57989.5,
+        "XSGW0825": 57990.5,
+        "XSGW0826": 57991.5,
+        "XSGW0827": 57992.5,
     }
 
     for fpath in sorted(glob(os.path.join(specdir, "*.dat"))):
@@ -51,11 +56,15 @@ def load_xshooter_spectra(specdir):
             good = (wave > 3000) & (wave < 25000) & np.isfinite(flux)
             if np.sum(good) < 50:
                 continue
-            spectra.append({
-                "wave": wave[good], "flux": flux[good],
-                "mjd": mjd, "source": "X-shooter",
-                "label": f"XSH +{mjd - MJD_GW:.1f}d",
-            })
+            spectra.append(
+                {
+                    "wave": wave[good],
+                    "flux": flux[good],
+                    "mjd": mjd,
+                    "source": "X-shooter",
+                    "label": f"XSH +{mjd - MJD_GW:.1f}d",
+                }
+            )
         except Exception:
             continue
 
@@ -100,10 +109,14 @@ def load_hst_stis_spectra(specdir):
                     flux = np.concatenate(all_f)
                     idx = np.argsort(wave)
 
-                    raw.append({
-                        "wave": wave[idx], "flux": flux[idx],
-                        "mjd": mjd, "grating": grating,
-                    })
+                    raw.append(
+                        {
+                            "wave": wave[idx],
+                            "flux": flux[idx],
+                            "mjd": mjd,
+                            "grating": grating,
+                        }
+                    )
             except Exception:
                 continue
 
@@ -131,10 +144,14 @@ def load_hst_stis_spectra(specdir):
                 interp_flux = np.interp(wave, s["wave"], s["flux"])
                 fluxes.append(interp_flux)
             avg_flux = np.mean(fluxes, axis=0)
-            merged.append({
-                "wave": wave, "flux": avg_flux,
-                "mjd": mjd_r, "grating": grating,
-            })
+            merged.append(
+                {
+                    "wave": wave,
+                    "flux": avg_flux,
+                    "mjd": mjd_r,
+                    "grating": grating,
+                }
+            )
 
     return sorted(merged, key=lambda s: (s["mjd"], s["grating"]))
 
@@ -185,12 +202,18 @@ def plot_at2017gfo_sequence():
         if len(wave) > 1000:
             bs = max(1, len(wave) // 800)
             n = len(wave) // bs
-            wave = wave[:n*bs].reshape(n, bs).mean(axis=1)
-            flux_norm = flux_norm[:n*bs].reshape(n, bs).mean(axis=1)
+            wave = wave[: n * bs].reshape(n, bs).mean(axis=1)
+            flux_norm = flux_norm[: n * bs].reshape(n, bs).mean(axis=1)
 
         ax.plot(wave, flux_norm + offset, color=color, lw=0.7, alpha=0.9)
-        ax.text(wave[wave < 22000][-1] + 300, offset + 0.5,
-                f"+{dt:.1f}d XSH", fontsize=6, va="center", color=color)
+        ax.text(
+            wave[wave < 22000][-1] + 300,
+            offset + 0.5,
+            f"+{dt:.1f}d XSH",
+            fontsize=6,
+            va="center",
+            color=color,
+        )
         offset += offset_step
 
     # Overlay HST/STIS UV spectrum
@@ -212,16 +235,20 @@ def plot_at2017gfo_sequence():
                 closest_offset = i * offset_step
                 break
 
-        ax.plot(wave[good], flux_norm[good] + closest_offset,
-                color="purple", lw=1.2, alpha=0.9)
-        ax.text(1500, closest_offset + 0.5,
-                f"+{dt:.1f}d HST/STIS", fontsize=6, va="center",
-                color="purple", fontweight="bold")
+        ax.plot(wave[good], flux_norm[good] + closest_offset, color="purple", lw=1.2, alpha=0.9)
+        ax.text(
+            1500,
+            closest_offset + 0.5,
+            f"+{dt:.1f}d HST/STIS",
+            fontsize=6,
+            va="center",
+            color="purple",
+            fontweight="bold",
+        )
 
     ax.set_xlabel(r"Wavelength ($\AA$)", fontsize=11)
     ax.set_ylabel("Normalized Flux + offset", fontsize=11)
-    ax.set_title("AT2017gfo — Spectral Sequence (X-shooter + HST/STIS UV)",
-                 fontsize=11)
+    ax.set_title("AT2017gfo — Spectral Sequence (X-shooter + HST/STIS UV)", fontsize=11)
     ax.set_xlim(1400, 24000)
     ax.grid(True, alpha=0.15)
 
@@ -292,15 +319,14 @@ def plot_sn2011fe_sequence():
             if len(wave_g) > 300:
                 bs = max(1, len(wave_g) // 300)
                 n = len(wave_g) // bs
-                wave_g = wave_g[:n*bs].reshape(n, bs).mean(axis=1)
-                flux_norm = flux_norm[:n*bs].reshape(n, bs).mean(axis=1)
+                wave_g = wave_g[: n * bs].reshape(n, bs).mean(axis=1)
+                flux_norm = flux_norm[: n * bs].reshape(n, bs).mean(axis=1)
 
             ax.plot(wave_g, flux_norm + offset, color=color, lw=0.8, alpha=0.9)
 
         # Label once per epoch
         if epoch_mjd not in plotted_epochs:
-            ax.text(10400, offset + 0.8, f"{dt:+.0f}d",
-                    fontsize=7, va="center", color=color)
+            ax.text(10400, offset + 0.8, f"{dt:+.0f}d", fontsize=7, va="center", color=color)
             plotted_epochs.add(epoch_mjd)
 
         offset += offset_step

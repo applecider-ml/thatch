@@ -1,11 +1,9 @@
 """Tests for thatch.cutouts."""
-import os
-import tempfile
+
 import numpy as np
 import pytest
 
 from astropy.io import fits
-from astropy.wcs import WCS
 
 
 @pytest.fixture
@@ -46,6 +44,7 @@ def sample_fits(tmp_path):
 def test_extract_cutout(sample_fits):
     """extract_cutout should return a valid cutout dict."""
     from thatch.cutouts import extract_cutout
+
     result = extract_cutout(sample_fits, ra=197.45, dec=-23.38, size_arcsec=2.0)
     assert result is not None
     assert "data" in result
@@ -56,6 +55,7 @@ def test_extract_cutout(sample_fits):
 def test_extract_cutout_offimage(sample_fits):
     """extract_cutout should return None for position off the image."""
     from thatch.cutouts import extract_cutout
+
     result = extract_cutout(sample_fits, ra=0.0, dec=0.0, size_arcsec=2.0)
     assert result is None
 

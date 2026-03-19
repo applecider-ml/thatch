@@ -1,4 +1,5 @@
 """Tests for thatch.constants."""
+
 from thatch.constants import (
     APERTURE_CORRECTIONS_5PX,
     APERTURE_CORRECTIONS_4PX,

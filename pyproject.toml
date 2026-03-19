@@ -39,3 +39,12 @@ thatch-crossmatch = "thatch.crossmatch:main"
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
+ignore = ["F601"]  # Allow duplicate dict keys (intentional per-instrument aperture corrections)
+
+[tool.ruff.lint.per-file-ignores]
+"examples/*" = ["F841", "F401"]  # Allow unused variables/imports in example scripts
+"thatch/harvest.py" = ["F841"]
+"thatch/spectra.py" = ["F841"]
+"thatch/tracker.py" = ["F841"]

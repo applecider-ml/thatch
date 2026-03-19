@@ -14,9 +14,7 @@ Usage:
 """
 
 import os
-import json
 import warnings
-from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -24,8 +22,7 @@ import matplotlib.pyplot as plt
 import requests
 from astropy.coordinates import SkyCoord
 from astropy import units as u
-from astropy.table import Table
-from astroquery.mast import Observations, Catalogs
+from astroquery.mast import Observations
 
 warnings.filterwarnings("ignore")
 
@@ -229,10 +226,24 @@ def query_osc(limit=500):
     # The full catalog is ~300MB; for the proposal demo we use targeted queries.
 
     well_known_sne = [
-        "SN2011fe", "SN2014J", "SN2012cg", "SN2013dy", "SN2005cf",
-        "SN2003du", "SN2012fr", "SN2017cbv", "SN2018oh", "SN2019ein",
-        "SN2011by", "SN2016coj", "SN2017erp", "SN2013aa", "SN2012ht",
-        "SN2009ig", "SN2005df", "SN2015F",
+        "SN2011fe",
+        "SN2014J",
+        "SN2012cg",
+        "SN2013dy",
+        "SN2005cf",
+        "SN2003du",
+        "SN2012fr",
+        "SN2017cbv",
+        "SN2018oh",
+        "SN2019ein",
+        "SN2011by",
+        "SN2016coj",
+        "SN2017erp",
+        "SN2013aa",
+        "SN2012ht",
+        "SN2009ig",
+        "SN2005df",
+        "SN2015F",
     ]
 
     results = []
@@ -258,14 +269,16 @@ def query_osc(limit=500):
                         # Convert RA from HMS to degrees if needed
                         try:
                             coord = SkyCoord(ra, dec, unit=(u.hourangle, u.deg))
-                            results.append({
-                                "name": sn_name,
-                                "ra": coord.ra.deg,
-                                "dec": coord.dec.deg,
-                                "type": claimedtype or "Unknown",
-                                "redshift": float(z) if z else None,
-                                "notes": "From OSC",
-                            })
+                            results.append(
+                                {
+                                    "name": sn_name,
+                                    "ra": coord.ra.deg,
+                                    "dec": coord.dec.deg,
+                                    "type": claimedtype or "Unknown",
+                                    "redshift": float(z) if z else None,
+                                    "notes": "From OSC",
+                                }
+                            )
                         except Exception:
                             pass
         except Exception as e:
@@ -301,7 +314,7 @@ def cross_match_with_hst(transients):
     for i, t in enumerate(transients):
         name = t["name"]
         ra, dec = t["ra"], t["dec"]
-        print(f"[{i+1}/{len(transients)}] Querying {name} (RA={ra:.5f}, Dec={dec:.5f})...")
+        print(f"[{i + 1}/{len(transients)}] Querying {name} (RA={ra:.5f}, Dec={dec:.5f})...")
 
         hst_obs = query_hst_observations(ra, dec, radius_arcsec=5.0)
         summary = summarize_hst_obs(hst_obs)
@@ -316,7 +329,7 @@ def cross_match_with_hst(transients):
             t["hst_obs_table"] = hst_obs
             results.append(t)
         else:
-            print(f"  No HST observations found")
+            print("  No HST observations found")
 
     print(f"\n=== {len(results)}/{len(transients)} transients have HST data ===")
     return results
@@ -343,26 +356,30 @@ def extract_photometry_from_obs(obs_table, name):
         return None
 
     # Filter to imaging observations (not spectroscopy)
-    imaging_mask = np.array([
-        "IMAGE" in str(dt).upper() or "image" in str(dt).lower()
-        for dt in obs_table["dataproduct_type"]
-    ])
+    imaging_mask = np.array(
+        [
+            "IMAGE" in str(dt).upper() or "image" in str(dt).lower()
+            for dt in obs_table["dataproduct_type"]
+        ]
+    )
     img_obs = obs_table[imaging_mask] if np.any(imaging_mask) else obs_table
 
     records = []
     for row in img_obs:
         try:
-            records.append({
-                "name": name,
-                "mjd_start": float(row["t_min"]) if row["t_min"] else None,
-                "mjd_end": float(row["t_max"]) if row["t_max"] else None,
-                "filter": str(row["filters"]),
-                "instrument": str(row["instrument_name"]),
-                "proposal_id": str(row["proposal_id"]),
-                "exposure_time": float(row["t_exptime"]) if row["t_exptime"] else None,
-                "target_name": str(row["target_name"]),
-                "obs_id": str(row["obs_id"]),
-            })
+            records.append(
+                {
+                    "name": name,
+                    "mjd_start": float(row["t_min"]) if row["t_min"] else None,
+                    "mjd_end": float(row["t_max"]) if row["t_max"] else None,
+                    "filter": str(row["filters"]),
+                    "instrument": str(row["instrument_name"]),
+                    "proposal_id": str(row["proposal_id"]),
+                    "exposure_time": float(row["t_exptime"]) if row["t_exptime"] else None,
+                    "target_name": str(row["target_name"]),
+                    "obs_id": str(row["obs_id"]),
+                }
+            )
         except (KeyError, TypeError, ValueError):
             continue
 
@@ -431,11 +448,18 @@ def plot_observation_timeline(transient, outdir=None):
 
     # Legend for instruments
     from matplotlib.lines import Line2D
+
     present_instruments = df["instrument"].unique()
     legend_elements = [
-        Line2D([0], [0], marker="o", color="w",
-               markerfacecolor=instrument_colors.get(inst, "gray"),
-               markersize=8, label=inst)
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="w",
+            markerfacecolor=instrument_colors.get(inst, "gray"),
+            markersize=8,
+            label=inst,
+        )
         for inst in present_instruments
         if inst in instrument_colors
     ]
@@ -455,16 +479,18 @@ def create_summary_table(results):
     rows = []
     for t in results:
         s = t.get("hst_summary", {})
-        rows.append({
-            "Name": t["name"],
-            "Type": t["type"],
-            "Redshift": t.get("redshift"),
-            "N_HST_obs": s.get("n_observations", 0),
-            "N_programs": len(s.get("programs", [])),
-            "Instruments": "; ".join(s.get("instruments", [])),
-            "Filters": "; ".join(sorted(s.get("filters", []))),
-            "Programs": "; ".join(sorted(s.get("programs", []))),
-        })
+        rows.append(
+            {
+                "Name": t["name"],
+                "Type": t["type"],
+                "Redshift": t.get("redshift"),
+                "N_HST_obs": s.get("n_observations", 0),
+                "N_programs": len(s.get("programs", [])),
+                "Instruments": "; ".join(s.get("instruments", [])),
+                "Filters": "; ".join(sorted(s.get("filters", []))),
+                "Programs": "; ".join(sorted(s.get("programs", []))),
+            }
+        )
 
     df = pd.DataFrame(rows)
     df = df.sort_values("N_HST_obs", ascending=False)
@@ -503,9 +529,7 @@ def main():
         name = t["name"]
         df = extract_photometry_from_obs(t.get("hst_obs_table"), name)
         if df is not None and len(df) > 0:
-            fname = os.path.join(
-                OUTDIR, f"obs_{name.replace(' ', '_')}.csv"
-            )
+            fname = os.path.join(OUTDIR, f"obs_{name.replace(' ', '_')}.csv")
             df.to_csv(fname, index=False)
 
     print("\n" + "=" * 60)

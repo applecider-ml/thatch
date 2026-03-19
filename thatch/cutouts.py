@@ -44,8 +44,7 @@ def extract_cutout(fits_path, ra, dec, size_arcsec=5.0, size_pixels=None):
         sci_ext = None
         for i, hdu in enumerate(hdul):
             if hdu.name == "SCI" or (
-                hasattr(hdu, "data") and hdu.data is not None
-                and hdu.data.ndim == 2 and i > 0
+                hasattr(hdu, "data") and hdu.data is not None and hdu.data.ndim == 2 and i > 0
             ):
                 sci_ext = i
                 break
@@ -80,8 +79,13 @@ def extract_cutout(fits_path, ra, dec, size_arcsec=5.0, size_pixels=None):
             return None
 
         # Get metadata
-        filt = (header.get("FILTER") or header.get("FILTER1") or
-                pri.get("FILTER") or pri.get("FILTER1") or "UNKNOWN")
+        filt = (
+            header.get("FILTER")
+            or header.get("FILTER1")
+            or pri.get("FILTER")
+            or pri.get("FILTER1")
+            or "UNKNOWN"
+        )
         filt2 = header.get("FILTER2", pri.get("FILTER2", ""))
         if filt in ["CLEAR1L", "CLEAR1S", "CLEAR", "N/A"] and filt2:
             filt = filt2
@@ -94,6 +98,7 @@ def extract_cutout(fits_path, ra, dec, size_arcsec=5.0, size_pixels=None):
             mjd = float(expstart)
         else:
             from astropy.time import Time
+
             date_obs = pri.get("DATE-OBS", header.get("DATE-OBS", ""))
             time_obs = pri.get("TIME-OBS", header.get("TIME-OBS", "00:00:00"))
             try:
@@ -197,6 +202,7 @@ def plot_cutout_mosaic(cutouts, title="", outpath=None, ncols=6):
         Number of columns.
     """
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -223,8 +229,9 @@ def plot_cutout_mosaic(cutouts, title="", outpath=None, ncols=6):
         vmin = np.nanpercentile(data, 5)
         vmax = np.nanpercentile(data, 99)
 
-        ax.imshow(data, origin="lower", cmap="gray_r",
-                  vmin=vmin, vmax=vmax, interpolation="nearest")
+        ax.imshow(
+            data, origin="lower", cmap="gray_r", vmin=vmin, vmax=vmax, interpolation="nearest"
+        )
         ax.set_title(f"{c['filter']}\nMJD {c['mjd']:.0f}", fontsize=6)
         ax.set_xticks([])
         ax.set_yticks([])

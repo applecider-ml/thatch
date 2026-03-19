@@ -18,6 +18,7 @@ from glob import glob
 import numpy as np
 import pandas as pd
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -50,21 +51,43 @@ MJD_DISCOVERY = 55796.7  # 2011 Aug 24
 # and Table 7.8 (IR, 0.13"/pix, r=0.52"), and ACS Instrument Handbook.
 APERTURE_CORRECTIONS_4PX = {
     # WFC3/UVIS (r=4px = 0.16"): EE ~ 0.74-0.80
-    "F225W": 0.740, "F275W": 0.755, "F336W": 0.775,
-    "F438W": 0.795, "F467M": 0.800, "F469N": 0.800,
-    "F475W": 0.800, "F475X": 0.800, "F547M": 0.810,
-    "F555W": 0.810, "F600LP": 0.810, "F606W": 0.810,
-    "F625W": 0.810, "F775W": 0.800, "F814W": 0.795,
+    "F225W": 0.740,
+    "F275W": 0.755,
+    "F336W": 0.775,
+    "F438W": 0.795,
+    "F467M": 0.800,
+    "F469N": 0.800,
+    "F475W": 0.800,
+    "F475X": 0.800,
+    "F547M": 0.810,
+    "F555W": 0.810,
+    "F600LP": 0.810,
+    "F606W": 0.810,
+    "F625W": 0.810,
+    "F775W": 0.800,
+    "F814W": 0.795,
     # WFC3/IR (r=4px = 0.52"): EE ~ 0.90-0.93
-    "F105W": 0.915, "F110W": 0.920, "F125W": 0.920,
-    "F140W": 0.920, "F153M": 0.915, "F160W": 0.910,
+    "F105W": 0.915,
+    "F110W": 0.920,
+    "F125W": 0.920,
+    "F140W": 0.920,
+    "F153M": 0.915,
+    "F160W": 0.910,
     # ACS/WFC (r=4px = 0.20"): EE ~ 0.78-0.82
-    "F435W": 0.785, "F475W": 0.795, "F555W": 0.805,
-    "F606W": 0.810, "F625W": 0.810, "F775W": 0.800,
-    "F814W": 0.795, "F850LP": 0.790,
+    "F435W": 0.785,
+    "F475W": 0.795,
+    "F555W": 0.805,
+    "F606W": 0.810,
+    "F625W": 0.810,
+    "F775W": 0.800,
+    "F814W": 0.795,
+    "F850LP": 0.790,
     # WFPC2/PC (r=4px = 0.18"): EE ~ 0.75-0.80
-    "F439W": 0.770, "F555W": 0.790, "F606W": 0.795,
-    "F814W": 0.780, "F1042M": 0.760,
+    "F439W": 0.770,
+    "F555W": 0.790,
+    "F606W": 0.795,
+    "F814W": 0.780,
+    "F1042M": 0.760,
 }
 
 
@@ -85,10 +108,21 @@ def query_and_filter():
     for row in hst_obs:
         dtype = str(row["dataproduct_type"]).lower()
         filt = str(row["filters"])
-        is_grism = any(g in filt for g in [
-            "G102", "G141", "G130M", "G140L", "G230L", "G230LB",
-            "G430L", "G750L", "MIRVIS", "MIRFUV"
-        ])
+        is_grism = any(
+            g in filt
+            for g in [
+                "G102",
+                "G141",
+                "G130M",
+                "G140L",
+                "G230L",
+                "G230LB",
+                "G430L",
+                "G750L",
+                "MIRVIS",
+                "MIRFUV",
+            ]
+        )
         if "image" in dtype and not is_grism:
             imaging.append(True)
             spectroscopy.append(False)
@@ -132,10 +166,12 @@ def download_products(obs_table, max_products=80):
 
     # Sort observations by proximity to B-max to prioritize peak coverage
     obs_copy = obs_table.copy()
-    t_mid = np.array([
-        float(row["t_min"]) if row["t_min"] and str(row["t_min"]) != "--" else np.nan
-        for row in obs_copy
-    ])
+    t_mid = np.array(
+        [
+            float(row["t_min"]) if row["t_min"] and str(row["t_min"]) != "--" else np.nan
+            for row in obs_copy
+        ]
+    )
     dt_from_peak = np.abs(t_mid - MJD_BMAX)
     # Replace NaN with large value so they sort to the end
     dt_from_peak[np.isnan(dt_from_peak)] = 1e6
@@ -150,10 +186,12 @@ def download_products(obs_table, max_products=80):
     products = Observations.get_product_list(obs_sorted)
 
     # Filter to drizzled images
-    drz_mask = np.array([
-        any(ext in str(pn) for ext in ["_drz.fits", "_drc.fits"])
-        for pn in products["productFilename"]
-    ])
+    drz_mask = np.array(
+        [
+            any(ext in str(pn) for ext in ["_drz.fits", "_drc.fits"])
+            for pn in products["productFilename"]
+        ]
+    )
     drz_products = products[drz_mask]
     print(f"  Found {len(drz_products)} drizzled products")
 
@@ -173,9 +211,7 @@ def extract_photometry():
     print("=" * 60)
 
     fits_files = glob(os.path.join(DATADIR, "**", "*.fits"), recursive=True)
-    fits_files = [f for f in fits_files if any(
-        ext in f for ext in ["_drz.fits", "_drc.fits"]
-    )]
+    fits_files = [f for f in fits_files if any(ext in f for ext in ["_drz.fits", "_drc.fits"])]
     print(f"  Processing {len(fits_files)} FITS files")
 
     records = []
@@ -191,7 +227,7 @@ def extract_photometry():
                 err = result["ab_mag_err"]
                 if np.isfinite(mag):
                     print(f"  {fname}: {filt:8s} dt={dt:+8.1f}d  mag={mag:.2f}+/-{err:.2f}")
-        except Exception as e:
+        except Exception:
             pass
 
     if not records:
@@ -282,7 +318,7 @@ def measure_one_image(fpath, fname):
 
         src_flux = np.sum(data[valid_ap]) - bg_med * np.sum(valid_ap)
         n_ap = float(np.sum(valid_ap))
-        src_err = np.sqrt(n_ap * bg_std ** 2 + np.abs(src_flux))
+        src_err = np.sqrt(n_ap * bg_std**2 + np.abs(src_flux))
 
         # Count rate (drz files are already e-/s)
         # Check if data is in counts or count rate
@@ -381,11 +417,7 @@ def plot_lightcurve(df):
         return
 
     # Quality cuts
-    good = (
-        df["ab_mag"].between(10, 30)
-        & df["ab_mag_err"].between(0, 1.0)
-        & (df["count_rate"] > 0)
-    )
+    good = df["ab_mag"].between(10, 30) & df["ab_mag_err"].between(0, 1.0) & (df["count_rate"] > 0)
     df_good = df[good].copy()
     print(f"  {len(df_good)}/{len(df)} measurements pass quality cuts")
 
@@ -396,17 +428,27 @@ def plot_lightcurve(df):
 
     # Filter colors (blue=UV, green=optical, red=IR)
     fcolors = {
-        "F225W": "#7b2d8e", "F275W": "#9b59b6", "F336W": "#3498db",
-        "F435W": "#2980b9", "F438W": "#2980b9",
-        "F467M": "#27ae60", "F469N": "#27ae60",
-        "F475W": "#2ecc71", "F475X": "#2ecc71",
+        "F225W": "#7b2d8e",
+        "F275W": "#9b59b6",
+        "F336W": "#3498db",
+        "F435W": "#2980b9",
+        "F438W": "#2980b9",
+        "F467M": "#27ae60",
+        "F469N": "#27ae60",
+        "F475W": "#2ecc71",
+        "F475X": "#2ecc71",
         "F502N": "#1abc9c",
-        "F547M": "#f1c40f", "F555W": "#f1c40f",
-        "F600LP": "#e67e22", "F606W": "#e67e22",
-        "F625W": "#e74c3c", "F775W": "#c0392b",
+        "F547M": "#f1c40f",
+        "F555W": "#f1c40f",
+        "F600LP": "#e67e22",
+        "F606W": "#e67e22",
+        "F625W": "#e74c3c",
+        "F775W": "#c0392b",
         "F814W": "#8e44ad",
-        "F105W": "#d35400", "F110W": "#e74c3c",
-        "F125W": "#c0392b", "F160W": "#7f0000",
+        "F105W": "#d35400",
+        "F110W": "#e74c3c",
+        "F125W": "#c0392b",
+        "F160W": "#7f0000",
     }
 
     # ---- Full light curve ----
@@ -416,18 +458,30 @@ def plot_lightcurve(df):
     for filt, grp in df_good.groupby("filter"):
         color = fcolors.get(filt, "gray")
         # Average duplicate epochs (same MJD, same filter)
-        grp_avg = grp.groupby(grp["mjd"].round(1)).agg({
-            "delta_t_days": "mean",
-            "ab_mag": "mean",
-            "ab_mag_err": lambda x: np.sqrt(np.sum(x**2)) / len(x),
-        }).reset_index(drop=True)
+        grp_avg = (
+            grp.groupby(grp["mjd"].round(1))
+            .agg(
+                {
+                    "delta_t_days": "mean",
+                    "ab_mag": "mean",
+                    "ab_mag_err": lambda x: np.sqrt(np.sum(x**2)) / len(x),
+                }
+            )
+            .reset_index(drop=True)
+        )
 
         ax.errorbar(
-            grp_avg["delta_t_days"], grp_avg["ab_mag"],
+            grp_avg["delta_t_days"],
+            grp_avg["ab_mag"],
             yerr=grp_avg["ab_mag_err"],
-            fmt="o", color=color, markersize=6,
-            label=filt, capsize=2, elinewidth=1,
-            markeredgecolor="k", markeredgewidth=0.3,
+            fmt="o",
+            color=color,
+            markersize=6,
+            label=filt,
+            capsize=2,
+            elinewidth=1,
+            markeredgecolor="k",
+            markeredgewidth=0.3,
         )
         plotted_filters.add(filt)
 
@@ -453,11 +507,17 @@ def plot_lightcurve(df):
         for filt, grp in near_peak.groupby("filter"):
             color = fcolors.get(filt, "gray")
             ax.errorbar(
-                grp["delta_t_days"], grp["ab_mag"],
+                grp["delta_t_days"],
+                grp["ab_mag"],
                 yerr=grp["ab_mag_err"],
-                fmt="o-", color=color, markersize=7,
-                label=filt, capsize=2, elinewidth=1,
-                markeredgecolor="k", markeredgewidth=0.3,
+                fmt="o-",
+                color=color,
+                markersize=7,
+                label=filt,
+                capsize=2,
+                elinewidth=1,
+                markeredgecolor="k",
+                markeredgewidth=0.3,
             )
         ax.invert_yaxis()
         ax.axvline(0, color="gray", ls="--", alpha=0.5, label="B-max")
@@ -474,9 +534,11 @@ def plot_lightcurve(df):
         print(f"  Saved: {out2}")
 
     # Print summary statistics
-    print(f"\n  Summary:")
+    print("\n  Summary:")
     print(f"    Filters with detections: {sorted(plotted_filters)}")
-    print(f"    Time range: {df_good['delta_t_days'].min():.0f} to {df_good['delta_t_days'].max():.0f} days from B-max")
+    print(
+        f"    Time range: {df_good['delta_t_days'].min():.0f} to {df_good['delta_t_days'].max():.0f} days from B-max"
+    )
     print(f"    Brightest: {df_good['ab_mag'].min():.1f} mag")
     print(f"    Programs: {sorted(df_good['proposal_id'].unique())}")
 

@@ -17,7 +17,6 @@ Usage:
 """
 
 import os
-import sys
 import time
 import warnings
 import traceback
@@ -26,8 +25,8 @@ from glob import glob
 import numpy as np
 import pandas as pd
 import matplotlib
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
@@ -48,29 +47,55 @@ FIGDIR = os.path.join(BASEDIR, "..", "Figures")
 os.makedirs(DATADIR, exist_ok=True)
 os.makedirs(FIGDIR, exist_ok=True)
 
-MAX_DOWNLOAD_PER_OBJECT = 80   # cap downloads per object
-MAX_RETRIES = 3                # MAST retry attempts
-RETRY_DELAY = 10               # seconds between retries
+MAX_DOWNLOAD_PER_OBJECT = 80  # cap downloads per object
+MAX_RETRIES = 3  # MAST retry attempts
+RETRY_DELAY = 10  # seconds between retries
 
 # Aperture corrections: encircled energy fraction within r=5 pixels.
 APERTURE_CORRECTIONS = {
-    "F225W": 0.800, "F275W": 0.810, "F336W": 0.830,
-    "F438W": 0.845, "F475W": 0.850, "F555W": 0.855,
-    "F600LP": 0.855, "F606W": 0.855, "F625W": 0.855,
-    "F775W": 0.850, "F814W": 0.845,
-    "F105W": 0.945, "F110W": 0.950, "F125W": 0.950,
-    "F140W": 0.950, "F153M": 0.945, "F160W": 0.945,
+    "F225W": 0.800,
+    "F275W": 0.810,
+    "F336W": 0.830,
+    "F438W": 0.845,
+    "F475W": 0.850,
+    "F555W": 0.855,
+    "F600LP": 0.855,
+    "F606W": 0.855,
+    "F625W": 0.855,
+    "F775W": 0.850,
+    "F814W": 0.845,
+    "F105W": 0.945,
+    "F110W": 0.950,
+    "F125W": 0.950,
+    "F140W": 0.950,
+    "F153M": 0.945,
+    "F160W": 0.945,
     "F435W": 0.835,
     # extras for broader filter coverage
-    "F218W": 0.790, "F390M": 0.840, "F410M": 0.845,
-    "F467M": 0.850, "F469N": 0.850, "F475X": 0.850,
-    "F502N": 0.855, "F547M": 0.855, "F631N": 0.855,
-    "F656N": 0.855, "F658N": 0.855, "F673N": 0.855,
-    "F845M": 0.845, "F850LP": 0.840,
-    "F128N": 0.945, "F164N": 0.940, "F373N": 0.830,
-    "F280N": 0.810, "F487N": 0.850,
-    "F439W": 0.840, "F702W": 0.855, "F675W": 0.855,
-    "F336W": 0.830, "F160LP": 0.800,
+    "F218W": 0.790,
+    "F390M": 0.840,
+    "F410M": 0.845,
+    "F467M": 0.850,
+    "F469N": 0.850,
+    "F475X": 0.850,
+    "F502N": 0.855,
+    "F547M": 0.855,
+    "F631N": 0.855,
+    "F656N": 0.855,
+    "F658N": 0.855,
+    "F673N": 0.855,
+    "F845M": 0.845,
+    "F850LP": 0.840,
+    "F128N": 0.945,
+    "F164N": 0.940,
+    "F373N": 0.830,
+    "F280N": 0.810,
+    "F487N": 0.850,
+    "F439W": 0.840,
+    "F702W": 0.855,
+    "F675W": 0.855,
+    "F336W": 0.830,
+    "F160LP": 0.800,
 }
 
 # Target transients with coordinates
@@ -126,9 +151,7 @@ def mast_retry(func, *args, max_retries=MAX_RETRIES, **kwargs):
                 print(f"    Retrying in {wait}s...")
                 time.sleep(wait)
             else:
-                raise RuntimeError(
-                    f"MAST call failed after {max_retries} attempts: {msg}"
-                ) from e
+                raise RuntimeError(f"MAST call failed after {max_retries} attempts: {msg}") from e
 
 
 # ============================================================
@@ -137,9 +160,7 @@ def mast_retry(func, *args, max_retries=MAX_RETRIES, **kwargs):
 def query_mast_imaging(ra, dec, radius_arcsec=5.0):
     """Query MAST for HST imaging (non-grism) observations."""
     coord = SkyCoord(ra=ra, dec=dec, unit="deg")
-    obs_table = mast_retry(
-        Observations.query_region, coord, radius=radius_arcsec * u.arcsec
-    )
+    obs_table = mast_retry(Observations.query_region, coord, radius=radius_arcsec * u.arcsec)
 
     # Filter to HST
     hst_mask = obs_table["obs_collection"] == "HST"
@@ -148,9 +169,20 @@ def query_mast_imaging(ra, dec, radius_arcsec=5.0):
     # Keep imaging, exclude grisms/spectroscopy
     keep = []
     grism_tokens = [
-        "G102", "G141", "G130M", "G140L", "G160M",
-        "G230L", "G230LB", "G430L", "G430M",
-        "G750L", "G750M", "MIRVIS", "MIRFUV", "PRISM",
+        "G102",
+        "G141",
+        "G130M",
+        "G140L",
+        "G160M",
+        "G230L",
+        "G230LB",
+        "G430L",
+        "G430M",
+        "G750L",
+        "G750M",
+        "MIRVIS",
+        "MIRFUV",
+        "PRISM",
     ]
     for row in hst_obs:
         dtype = str(row["dataproduct_type"]).lower()
@@ -171,22 +203,21 @@ def download_drz_products(obs_table, dest_dir, max_products=MAX_DOWNLOAD_PER_OBJ
     os.makedirs(dest_dir, exist_ok=True)
 
     # Already-downloaded files (skip re-download)
-    existing = set(os.path.basename(f) for f in
-                   glob(os.path.join(dest_dir, "*.fits")))
+    existing = set(os.path.basename(f) for f in glob(os.path.join(dest_dir, "*.fits")))
 
     products = mast_retry(Observations.get_product_list, obs_table)
 
     # Filter to drz/drc
-    drz_mask = np.array([
-        any(ext in str(pn) for ext in ["_drz.fits", "_drc.fits"])
-        for pn in products["productFilename"]
-    ])
+    drz_mask = np.array(
+        [
+            any(ext in str(pn) for ext in ["_drz.fits", "_drc.fits"])
+            for pn in products["productFilename"]
+        ]
+    )
     drz_products = products[drz_mask]
 
     # Remove already-downloaded
-    new_mask = np.array([
-        str(pn) not in existing for pn in drz_products["productFilename"]
-    ])
+    new_mask = np.array([str(pn) not in existing for pn in drz_products["productFilename"]])
     drz_new = drz_products[new_mask]
 
     if len(drz_new) == 0 and len(drz_products) > 0:
@@ -227,8 +258,7 @@ def get_filter_name(header, pri):
     for hdr in [header, pri]:
         for key in ["FILTER", "FILTER1", "FILTER2"]:
             val = str(hdr.get(key, "")).strip()
-            if (val and val.startswith("F") and len(val) >= 4
-                    and "CLEAR" not in val.upper()):
+            if val and val.startswith("F") and len(val) >= 4 and "CLEAR" not in val.upper():
                 return val
 
     # Fallback: try PHOTMODE to extract filter name (e.g. "WFPC2,1,A2D7,F547M,,CAL")
@@ -236,7 +266,17 @@ def get_filter_name(header, pri):
         photmode = str(hdr.get("PHOTMODE", ""))
         for token in photmode.split(","):
             token = token.strip()
-            if token.startswith("F") and len(token) >= 4 and token[1:].replace("W", "").replace("M", "").replace("N", "").replace("LP", "").replace("X", "")[:3].isdigit():
+            if (
+                token.startswith("F")
+                and len(token) >= 4
+                and token[1:]
+                .replace("W", "")
+                .replace("M", "")
+                .replace("N", "")
+                .replace("LP", "")
+                .replace("X", "")[:3]
+                .isdigit()
+            ):
                 return token
 
     return "UNKNOWN"
@@ -332,7 +372,7 @@ def measure_one_image(fpath, coord):
 
         n_ap = float(np.sum(valid_ap))
         src_flux = np.sum(data[valid_ap]) - bg_med * n_ap
-        src_err = np.sqrt(n_ap * bg_std ** 2 + np.abs(src_flux))
+        src_err = np.sqrt(n_ap * bg_std**2 + np.abs(src_flux))
 
         # Count rate (drz files are already in e-/s typically)
         bunit = str(header.get("BUNIT", pri.get("BUNIT", ""))).strip().upper()
@@ -376,9 +416,7 @@ def measure_one_image(fpath, coord):
 def extract_photometry(data_dir, coord):
     """Run aperture photometry on all drz/drc FITS files in data_dir."""
     fits_files = glob(os.path.join(data_dir, "**", "*.fits"), recursive=True)
-    fits_files = [f for f in fits_files if any(
-        ext in f for ext in ["_drz.fits", "_drc.fits"]
-    )]
+    fits_files = [f for f in fits_files if any(ext in f for ext in ["_drz.fits", "_drc.fits"])]
     if not fits_files:
         return None
 
@@ -418,21 +456,21 @@ def process_one_target(target):
             print(f"  Already processed ({len(existing)} measurements). Skipping.")
             return name, existing
 
-    print(f"  Querying MAST (radius={radius}\")")
+    print(f'  Querying MAST (radius={radius}")')
     img_obs = query_mast_imaging(ra, dec, radius_arcsec=radius)
     n_img = len(img_obs) if img_obs is not None else 0
     print(f"  Found {n_img} HST imaging observations")
 
     if n_img == 0:
-        print(f"  No imaging observations found. Skipping.")
+        print("  No imaging observations found. Skipping.")
         return name, None
 
     # Download
-    print(f"  Downloading drizzled products...")
+    print("  Downloading drizzled products...")
     download_drz_products(img_obs, obj_dir)
 
     # Photometry
-    print(f"  Extracting aperture photometry...")
+    print("  Extracting aperture photometry...")
     df = extract_photometry(obj_dir, coord)
 
     if df is not None and len(df) > 0:
@@ -441,7 +479,7 @@ def process_one_target(target):
         n_good = df["ab_mag"].between(10, 35).sum()
         print(f"  Saved {len(df)} measurements ({n_good} with valid mags) -> {phot_file}")
     else:
-        print(f"  No photometry could be extracted.")
+        print("  No photometry could be extracted.")
 
     return name, df
 
@@ -455,7 +493,9 @@ def main():
     results = {}
     for i, target in enumerate(TARGETS):
         name = target["name"]
-        print(f"\n[{i+1}/{len(TARGETS)}] === {name} (z={target['redshift']}, {target['type']}) ===")
+        print(
+            f"\n[{i + 1}/{len(TARGETS)}] === {name} (z={target['redshift']}, {target['type']}) ==="
+        )
         try:
             _, df = process_one_target(target)
             results[name] = df

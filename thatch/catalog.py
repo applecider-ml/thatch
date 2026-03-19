@@ -12,9 +12,23 @@ from glob import glob
 
 
 STANDARD_COLUMNS = [
-    "object", "filename", "mjd", "delta_t_days", "filter", "instrument",
-    "exptime_s", "count_rate", "count_rate_err", "ab_mag", "ab_mag_err",
-    "x_pix", "y_pix", "photflam", "photplam", "bg_median", "bg_std",
+    "object",
+    "filename",
+    "mjd",
+    "delta_t_days",
+    "filter",
+    "instrument",
+    "exptime_s",
+    "count_rate",
+    "count_rate_err",
+    "ab_mag",
+    "ab_mag_err",
+    "x_pix",
+    "y_pix",
+    "photflam",
+    "photplam",
+    "bg_median",
+    "bg_std",
 ]
 
 
@@ -125,21 +139,18 @@ def catalog_summary(catalog):
     for obj, grp in catalog.groupby("object"):
         v = grp[grp["ab_mag"].notna() & (grp["ab_mag"] < 30)]
         filters = sorted(v["filter"].unique()) if len(v) > 0 else []
-        print(f"    {obj:20s}: {len(grp):4d} total, {len(v):4d} detections, "
-              f"{len(filters)} filters")
+        print(f"    {obj:20s}: {len(grp):4d} total, {len(v):4d} detections, {len(filters)} filters")
 
     print("\n  By filter:")
     for filt, grp in valid.groupby("filter"):
-        print(f"    {filt:10s}: {len(grp):4d} detections across "
-              f"{grp['object'].nunique()} objects")
+        print(f"    {filt:10s}: {len(grp):4d} detections across {grp['object'].nunique()} objects")
 
 
 def main():
     """Build catalog from default data directory."""
     import sys
 
-    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                            "..", "..", "data")
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data")
     if len(sys.argv) > 1:
         data_dir = sys.argv[1]
 

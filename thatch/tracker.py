@@ -38,17 +38,32 @@ class Status(str, Enum):
 
 
 TRACKER_COLUMNS = [
-    "name", "ra", "dec", "type", "z", "discovery_mjd",
-    "n_hst_imaging", "n_hst_spectroscopy", "n_hst_programs",
+    "name",
+    "ra",
+    "dec",
+    "type",
+    "z",
+    "discovery_mjd",
+    "n_hst_imaging",
+    "n_hst_spectroscopy",
+    "n_hst_programs",
     "status",
-    "n_images_downloaded", "n_spectra_downloaded",
-    "n_photometry_measurements", "n_valid_detections",
-    "n_cutouts", "n_spectra_extracted",
-    "download_started", "download_completed",
-    "photometry_started", "photometry_completed",
-    "spectra_started", "spectra_completed",
-    "cutouts_started", "cutouts_completed",
-    "last_error", "last_updated",
+    "n_images_downloaded",
+    "n_spectra_downloaded",
+    "n_photometry_measurements",
+    "n_valid_detections",
+    "n_cutouts",
+    "n_spectra_extracted",
+    "download_started",
+    "download_completed",
+    "photometry_started",
+    "photometry_completed",
+    "spectra_started",
+    "spectra_completed",
+    "cutouts_started",
+    "cutouts_completed",
+    "last_error",
+    "last_updated",
 ]
 
 
@@ -75,34 +90,36 @@ def init_tracker(crossmatch_path, tracker_path):
 
     records = []
     for _, row in xmatch.iterrows():
-        records.append({
-            "name": row["name"],
-            "ra": row["ra"],
-            "dec": row["dec"],
-            "type": row["type"],
-            "z": row.get("z", np.nan),
-            "discovery_mjd": row.get("discovery_mjd", np.nan),
-            "n_hst_imaging": int(row.get("n_imaging", 0)),
-            "n_hst_spectroscopy": int(row.get("n_spectroscopy", 0)),
-            "n_hst_programs": int(row.get("n_programs", 0)),
-            "status": Status.QUEUED.value,
-            "n_images_downloaded": 0,
-            "n_spectra_downloaded": 0,
-            "n_photometry_measurements": 0,
-            "n_valid_detections": 0,
-            "n_cutouts": 0,
-            "n_spectra_extracted": 0,
-            "download_started": None,
-            "download_completed": None,
-            "photometry_started": None,
-            "photometry_completed": None,
-            "spectra_started": None,
-            "spectra_completed": None,
-            "cutouts_started": None,
-            "cutouts_completed": None,
-            "last_error": None,
-            "last_updated": _now(),
-        })
+        records.append(
+            {
+                "name": row["name"],
+                "ra": row["ra"],
+                "dec": row["dec"],
+                "type": row["type"],
+                "z": row.get("z", np.nan),
+                "discovery_mjd": row.get("discovery_mjd", np.nan),
+                "n_hst_imaging": int(row.get("n_imaging", 0)),
+                "n_hst_spectroscopy": int(row.get("n_spectroscopy", 0)),
+                "n_hst_programs": int(row.get("n_programs", 0)),
+                "status": Status.QUEUED.value,
+                "n_images_downloaded": 0,
+                "n_spectra_downloaded": 0,
+                "n_photometry_measurements": 0,
+                "n_valid_detections": 0,
+                "n_cutouts": 0,
+                "n_spectra_extracted": 0,
+                "download_started": None,
+                "download_completed": None,
+                "photometry_started": None,
+                "photometry_completed": None,
+                "spectra_started": None,
+                "spectra_completed": None,
+                "cutouts_started": None,
+                "cutouts_completed": None,
+                "last_error": None,
+                "last_updated": _now(),
+            }
+        )
 
     tracker = pd.DataFrame(records)
     tracker.to_parquet(tracker_path, index=False)
@@ -206,8 +223,9 @@ def print_summary(tracker):
     print(f"  Cutouts: {total_cut}")
 
 
-def run_pipeline(tracker_path, data_dir, stages=None, max_objects=None,
-                 max_download=50, delay_between=2.0):
+def run_pipeline(
+    tracker_path, data_dir, stages=None, max_objects=None, max_download=50, delay_between=2.0
+):
     """Run the full THATCH pipeline on queued objects.
 
     Parameters
@@ -237,12 +255,16 @@ def run_pipeline(tracker_path, data_dir, stages=None, max_objects=None,
     tracker = load_tracker(tracker_path)
 
     # Determine which objects to process
-    actionable = tracker[tracker["status"].isin([
-        Status.QUEUED.value,
-        Status.DOWNLOADED.value,
-        Status.PHOTOMETRY_DONE.value,
-        Status.SPECTRA_DONE.value,
-    ])]
+    actionable = tracker[
+        tracker["status"].isin(
+            [
+                Status.QUEUED.value,
+                Status.DOWNLOADED.value,
+                Status.PHOTOMETRY_DONE.value,
+                Status.SPECTRA_DONE.value,
+            ]
+        )
+    ]
 
     if max_objects:
         actionable = actionable.head(max_objects)
@@ -255,14 +277,15 @@ def run_pipeline(tracker_path, data_dir, stages=None, max_objects=None,
         obj_dir = os.path.join(data_dir, name)
         os.makedirs(obj_dir, exist_ok=True)
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"{name} ({row['type']}) — status: {row['status']}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
         # --- DOWNLOAD ---
         if "download" in stages and row["status"] == Status.QUEUED.value:
-            tracker = update_status(tracker, name, Status.DOWNLOADING,
-                                    tracker_path, download_started=_now())
+            tracker = update_status(
+                tracker, name, Status.DOWNLOADING, tracker_path, download_started=_now()
+            )
             try:
                 coord = SkyCoord(ra=ra, dec=dec, unit="deg")
                 obs = Observations.query_region(coord, radius=5.0 * u.arcsec)
@@ -270,57 +293,69 @@ def run_pipeline(tracker_path, data_dir, stages=None, max_objects=None,
 
                 # Filter to imaging
                 import numpy as np_local
-                img_mask = np_local.array(["image" in str(r["dataproduct_type"]).lower()
-                                           for r in hst])
+
+                img_mask = np_local.array(
+                    ["image" in str(r["dataproduct_type"]).lower() for r in hst]
+                )
                 img_obs = hst[img_mask]
 
                 if len(img_obs) > 0:
                     products = Observations.get_product_list(img_obs)
-                    drz_mask = np_local.array([
-                        any(ext in str(pn) for ext in ["_drz.fits", "_drc.fits"])
-                        for pn in products["productFilename"]
-                    ])
+                    drz_mask = np_local.array(
+                        [
+                            any(ext in str(pn) for ext in ["_drz.fits", "_drc.fits"])
+                            for pn in products["productFilename"]
+                        ]
+                    )
                     drz = products[drz_mask]
                     if len(drz) > max_download:
                         drz = drz[:max_download]
 
                     if len(drz) > 0:
                         manifest = Observations.download_products(
-                            drz, download_dir=obj_dir, flat=True)
-                        n_dl = len([f for f in manifest["Local Path"]
-                                    if os.path.exists(str(f))])
+                            drz, download_dir=obj_dir, flat=True
+                        )
+                        n_dl = len([f for f in manifest["Local Path"] if os.path.exists(str(f))])
                     else:
                         n_dl = 0
                 else:
                     n_dl = 0
 
                 n_fits = len(glob(os.path.join(obj_dir, "*.fits")))
-                tracker = update_status(tracker, name, Status.DOWNLOADED,
-                                        tracker_path,
-                                        n_images_downloaded=n_fits,
-                                        download_completed=_now())
+                tracker = update_status(
+                    tracker,
+                    name,
+                    Status.DOWNLOADED,
+                    tracker_path,
+                    n_images_downloaded=n_fits,
+                    download_completed=_now(),
+                )
                 print(f"  Downloaded {n_fits} images")
 
             except Exception as e:
-                tracker = update_status(tracker, name, Status.DOWNLOAD_FAILED,
-                                        tracker_path, last_error=str(e)[:200])
+                tracker = update_status(
+                    tracker, name, Status.DOWNLOAD_FAILED, tracker_path, last_error=str(e)[:200]
+                )
                 print(f"  Download failed: {e}")
 
             time.sleep(delay_between)
 
         # --- PHOTOMETRY ---
         if "photometry" in stages and row["status"] in [
-            Status.DOWNLOADED.value, Status.QUEUED.value
+            Status.DOWNLOADED.value,
+            Status.QUEUED.value,
         ]:
             # Check if images exist
             n_fits = len(glob(os.path.join(obj_dir, "*.fits")))
             if n_fits == 0:
                 continue
 
-            tracker = update_status(tracker, name, Status.PHOTOMETRY,
-                                    tracker_path, photometry_started=_now())
+            tracker = update_status(
+                tracker, name, Status.PHOTOMETRY, tracker_path, photometry_started=_now()
+            )
             try:
                 from thatch.photometry import process_one_target
+
                 target = {"name": name, "ra": ra, "dec": dec, "type": row["type"]}
                 process_one_target(target)
 
@@ -333,46 +368,58 @@ def run_pipeline(tracker_path, data_dir, stages=None, max_objects=None,
                 else:
                     n_meas, n_det = 0, 0
 
-                tracker = update_status(tracker, name, Status.PHOTOMETRY_DONE,
-                                        tracker_path,
-                                        n_photometry_measurements=n_meas,
-                                        n_valid_detections=n_det,
-                                        photometry_completed=_now())
+                tracker = update_status(
+                    tracker,
+                    name,
+                    Status.PHOTOMETRY_DONE,
+                    tracker_path,
+                    n_photometry_measurements=n_meas,
+                    n_valid_detections=n_det,
+                    photometry_completed=_now(),
+                )
                 print(f"  Photometry: {n_meas} measurements, {n_det} detections")
 
             except Exception as e:
-                tracker = update_status(tracker, name, Status.PHOTOMETRY_FAILED,
-                                        tracker_path, last_error=str(e)[:200])
+                tracker = update_status(
+                    tracker, name, Status.PHOTOMETRY_FAILED, tracker_path, last_error=str(e)[:200]
+                )
                 print(f"  Photometry failed: {e}")
 
         # --- CUTOUTS ---
-        if "cutouts" in stages and tracker.loc[
-            tracker["name"] == name, "status"
-        ].values[0] in [Status.PHOTOMETRY_DONE.value, Status.SPECTRA_DONE.value]:
-            tracker = update_status(tracker, name, Status.CUTOUTS,
-                                    tracker_path, cutouts_started=_now())
+        if "cutouts" in stages and tracker.loc[tracker["name"] == name, "status"].values[0] in [
+            Status.PHOTOMETRY_DONE.value,
+            Status.SPECTRA_DONE.value,
+        ]:
+            tracker = update_status(
+                tracker, name, Status.CUTOUTS, tracker_path, cutouts_started=_now()
+            )
             try:
                 from thatch.cutouts import extract_cutouts_for_object, save_cutouts_hdf5
-                cutouts = extract_cutouts_for_object(obj_dir, ra, dec,
-                                                      size_arcsec=5.0)
+
+                cutouts = extract_cutouts_for_object(obj_dir, ra, dec, size_arcsec=5.0)
                 if cutouts:
                     hdf5_path = os.path.join(obj_dir, f"{name}_cutouts.hdf5")
                     save_cutouts_hdf5(cutouts, hdf5_path, object_name=name)
 
-                tracker = update_status(tracker, name, Status.COMPLETE,
-                                        tracker_path,
-                                        n_cutouts=len(cutouts) if cutouts else 0,
-                                        cutouts_completed=_now())
+                tracker = update_status(
+                    tracker,
+                    name,
+                    Status.COMPLETE,
+                    tracker_path,
+                    n_cutouts=len(cutouts) if cutouts else 0,
+                    cutouts_completed=_now(),
+                )
                 print(f"  Cutouts: {len(cutouts) if cutouts else 0}")
 
             except Exception as e:
-                tracker = update_status(tracker, name, Status.CUTOUTS_FAILED,
-                                        tracker_path, last_error=str(e)[:200])
+                tracker = update_status(
+                    tracker, name, Status.CUTOUTS_FAILED, tracker_path, last_error=str(e)[:200]
+                )
                 print(f"  Cutouts failed: {e}")
 
     # Final summary
     tracker = load_tracker(tracker_path)
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print_summary(tracker)
 
     return tracker
@@ -397,9 +444,12 @@ def main():
     p_run.add_argument("--datadir", default="data", help="Data directory")
     p_run.add_argument("--max-objects", type=int, help="Max objects to process")
     p_run.add_argument("--max-download", type=int, default=50)
-    p_run.add_argument("--stages", nargs="+",
-                       default=["download", "photometry", "cutouts"],
-                       help="Pipeline stages to run")
+    p_run.add_argument(
+        "--stages",
+        nargs="+",
+        default=["download", "photometry", "cutouts"],
+        help="Pipeline stages to run",
+    )
 
     args = parser.parse_args()
 
@@ -409,10 +459,13 @@ def main():
         tracker = load_tracker(args.tracker)
         print_summary(tracker)
     elif args.cmd == "run":
-        run_pipeline(args.tracker, args.datadir,
-                     stages=args.stages,
-                     max_objects=args.max_objects,
-                     max_download=args.max_download)
+        run_pipeline(
+            args.tracker,
+            args.datadir,
+            stages=args.stages,
+            max_objects=args.max_objects,
+            max_download=args.max_download,
+        )
     else:
         parser.print_help()
 

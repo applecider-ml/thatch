@@ -16,6 +16,7 @@ import sys
 import warnings
 import numpy as np
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -50,8 +51,16 @@ def identify_visit_pairs(flt_dir):
     # Exclude HAP reprocessed files (start with hst_)
     flt_files = [f for f in flt_files if not os.path.basename(f).startswith("hst_")]
 
-    visits = defaultdict(lambda: {"direct": [], "grism": [], "grism_filter": None,
-                                   "direct_filter": None, "mjd": None, "program": None})
+    visits = defaultdict(
+        lambda: {
+            "direct": [],
+            "grism": [],
+            "grism_filter": None,
+            "direct_filter": None,
+            "mjd": None,
+            "program": None,
+        }
+    )
 
     for fpath in flt_files:
         h = fits.getheader(fpath, 0)
@@ -93,16 +102,18 @@ def identify_visit_pairs(flt_dir):
                     best_dk = dk
 
         if best_dk and best_dt < 1.0:  # within 1 day
-            paired.append({
-                "grism_visit": gk,
-                "direct_visit": best_dk,
-                "grism_files": gv["grism"],
-                "direct_files": direct_visits[best_dk]["direct"],
-                "grism_filter": gv["grism_filter"],
-                "direct_filter": direct_visits[best_dk]["direct_filter"],
-                "mjd": gv["mjd"],
-                "program": gv["program"],
-            })
+            paired.append(
+                {
+                    "grism_visit": gk,
+                    "direct_visit": best_dk,
+                    "grism_files": gv["grism"],
+                    "direct_files": direct_visits[best_dk]["direct"],
+                    "grism_filter": gv["grism_filter"],
+                    "direct_filter": direct_visits[best_dk]["direct_filter"],
+                    "mjd": gv["mjd"],
+                    "program": gv["program"],
+                }
+            )
 
     return paired
 
@@ -127,7 +138,6 @@ def extract_with_grizli(grism_file, direct_file, ra, dec, seg_id=1):
         Extracted spectrum.
     """
     from grizli import model as grizli_model
-    from grizli import utils as grizli_utils
 
     fname = os.path.basename(grism_file)
 
@@ -156,7 +166,7 @@ def extract_with_grizli(grism_file, direct_file, ra, dec, seg_id=1):
         # Create segmentation map: circle around source
         seg = np.zeros((ny, nx), dtype=int)
         yy, xx = np.mgrid[:ny, :nx]
-        dist = np.sqrt((xx - x_src)**2 + (yy - y_src)**2)
+        dist = np.sqrt((xx - x_src) ** 2 + (yy - y_src) ** 2)
         seg[dist <= 8] = seg_id  # 8-pixel radius
 
         # Create a simple catalog
@@ -197,9 +207,9 @@ def extract_with_grizli(grism_file, direct_file, ra, dec, seg_id=1):
         )
 
         # Compute model for our source
-        grism_flt.compute_model_orders(id=seg_id, mag=24.0,
-                                        compute_size=True, is_cgs=False,
-                                        verbose=False)
+        grism_flt.compute_model_orders(
+            id=seg_id, mag=24.0, compute_size=True, is_cgs=False, verbose=False
+        )
 
         # Get disperser orders — structure is (status, spectrum, OrderedDict)
         disp = grism_flt.object_dispersers.get(seg_id)
@@ -214,8 +224,7 @@ def extract_with_grizli(grism_file, direct_file, ra, dec, seg_id=1):
 
         # Create BeamCutout for first order
         beam_obj = orders["A"]
-        beam = grizli_model.BeamCutout(flt=grism_flt, beam=beam_obj,
-                                        conf=grism_flt.conf)
+        beam = grizli_model.BeamCutout(flt=grism_flt, beam=beam_obj, conf=grism_flt.conf)
 
         # Optimal 1D extraction
         wave_1d = beam.beam.lam
@@ -228,7 +237,7 @@ def extract_with_grizli(grism_file, direct_file, ra, dec, seg_id=1):
             weights = model_2d / np.maximum(model_2d.sum(axis=0, keepdims=True), 1e-30)
             weights = np.nan_to_num(weights, 0)
             flux_1d = np.sum(flux_2d * weights, axis=0)
-            var_1d = np.sum((err_2d * weights)**2, axis=0)
+            var_1d = np.sum((err_2d * weights) ** 2, axis=0)
             err_1d = np.sqrt(np.maximum(var_1d, 0))
         else:
             flux_1d = np.sum(flux_2d, axis=0)
@@ -237,8 +246,7 @@ def extract_with_grizli(grism_file, direct_file, ra, dec, seg_id=1):
         # Flux calibrate: divide by sensitivity
         # Require sensitivity > 10% of peak to avoid edge artifacts
         sens_thresh = 0.1 * np.max(sens)
-        good = ((sens > sens_thresh) & (wave_1d > 0) &
-                np.isfinite(flux_1d) & np.isfinite(err_1d))
+        good = (sens > sens_thresh) & (wave_1d > 0) & np.isfinite(flux_1d) & np.isfinite(err_1d)
         if np.sum(good) < 10:
             print(f"  {fname}: too few good pixels after calibration")
             return None
@@ -272,6 +280,7 @@ def extract_with_grizli(grism_file, direct_file, ra, dec, seg_id=1):
     except Exception as e:
         print(f"  {fname}: grizli extraction failed: {e}")
         import traceback
+
         traceback.print_exc()
         return None
 
@@ -288,10 +297,12 @@ def main():
     pairs = identify_visit_pairs(flt_dir)
     print(f"Found {len(pairs)} grism visits with direct image pairs:")
     for p in pairs:
-        print(f"  {p['grism_filter']:5s} MJD={p['mjd']:.3f} "
-              f"dt={p['mjd']-MJD_GW:+.1f}d "
-              f"prog={p['program']} "
-              f"({len(p['grism_files'])}G + {len(p['direct_files'])}D)")
+        print(
+            f"  {p['grism_filter']:5s} MJD={p['mjd']:.3f} "
+            f"dt={p['mjd'] - MJD_GW:+.1f}d "
+            f"prog={p['program']} "
+            f"({len(p['grism_files'])}G + {len(p['direct_files'])}D)"
+        )
 
     # Extract spectra
     print("\nExtracting spectra with grizli...")
@@ -305,13 +316,16 @@ def main():
         direct_file = pair["direct_files"][0]
 
         for grism_file in pair["grism_files"]:
-            print(f"\n  Processing {os.path.basename(grism_file)} "
-                  f"({grism_filter}, dt={dt:+.1f}d)...")
+            print(
+                f"\n  Processing {os.path.basename(grism_file)} ({grism_filter}, dt={dt:+.1f}d)..."
+            )
             spec = extract_with_grizli(grism_file, direct_file, RA, DEC)
             if spec is not None:
                 all_spectra.append(spec)
-                print(f"    OK: {len(spec['wavelength'])} pixels, "
-                      f"{spec['wavelength'].min():.0f}-{spec['wavelength'].max():.0f} A")
+                print(
+                    f"    OK: {len(spec['wavelength'])} pixels, "
+                    f"{spec['wavelength'].min():.0f}-{spec['wavelength'].max():.0f} A"
+                )
 
     if not all_spectra:
         print("\nNo spectra extracted. Falling back to box extraction.")
@@ -335,28 +349,34 @@ def main():
         avg_flux = np.mean(fluxes, axis=0)
         avg_err = ref["flux_err"] / np.sqrt(len(specs))
 
-        merged.append({
-            "mjd": mjd_r,
-            "delta_t": mjd_r - MJD_GW,
-            "grism": grism,
-            "wavelength": wave,
-            "flux": avg_flux,
-            "flux_err": avg_err,
-            "n_combined": len(specs),
-        })
+        merged.append(
+            {
+                "mjd": mjd_r,
+                "delta_t": mjd_r - MJD_GW,
+                "grism": grism,
+                "wavelength": wave,
+                "flux": avg_flux,
+                "flux_err": avg_err,
+                "n_combined": len(specs),
+            }
+        )
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Merged to {len(merged)} unique epoch/grism spectra:")
     for m in merged:
-        print(f"  {m['grism']} dt={m['delta_t']:+.1f}d "
-              f"({m['n_combined']} exposures) "
-              f"{m['wavelength'].min():.0f}-{m['wavelength'].max():.0f} A")
+        print(
+            f"  {m['grism']} dt={m['delta_t']:+.1f}d "
+            f"({m['n_combined']} exposures) "
+            f"{m['wavelength'].min():.0f}-{m['wavelength'].max():.0f} A"
+        )
 
     # Plot
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
 
-    for ax, grism, title in [(axes[0], "G102", r"G102 (0.8-1.15 $\mu$m)"),
-                              (axes[1], "G141", r"G141 (1.1-1.7 $\mu$m)")]:
+    for ax, grism, title in [
+        (axes[0], "G102", r"G102 (0.8-1.15 $\mu$m)"),
+        (axes[1], "G141", r"G141 (1.1-1.7 $\mu$m)"),
+    ]:
         grism_specs = [m for m in merged if m["grism"] == grism]
         if not grism_specs:
             ax.set_title(title)
@@ -371,10 +391,12 @@ def main():
             wave_um = m["wavelength"] / 1e4
 
             from scipy.ndimage import uniform_filter1d
+
             flux_smooth = uniform_filter1d(m["flux"], size=3)
 
-            ax.plot(wave_um, flux_smooth, color=color, lw=1,
-                    label=f"+{m['delta_t']:.0f}d", alpha=0.9)
+            ax.plot(
+                wave_um, flux_smooth, color=color, lw=1, label=f"+{m['delta_t']:.0f}d", alpha=0.9
+            )
 
         ax.set_xlabel(r"Wavelength ($\mu$m)", fontsize=11)
         ax.set_title(title, fontsize=11)
@@ -383,8 +405,7 @@ def main():
 
     axes[0].set_ylabel(r"F$_\lambda$ (erg s$^{-1}$ cm$^{-2}$ $\AA^{-1}$)", fontsize=11)
 
-    fig.suptitle("AT2017gfo — WFC3/IR Grism Spectra (grizli extraction)",
-                 fontsize=12, y=1.02)
+    fig.suptitle("AT2017gfo — WFC3/IR Grism Spectra (grizli extraction)", fontsize=12, y=1.02)
     plt.tight_layout()
     outpath = os.path.join(FIGDIR, "AT2017gfo_grism_grizli.pdf")
     plt.savefig(outpath, dpi=150, bbox_inches="tight")
@@ -400,22 +421,31 @@ def main():
     if os.path.exists(stis_path):
         sys.path.insert(0, BASEDIR)
         from hustle_spectra import read_x1d_spectrum
+
         stis = read_x1d_spectrum(stis_path)
         if stis:
             w = stis["wavelength"]
             f = stis["flux"]
             good = (w > 1600) & (w < 3100) & np.isfinite(f)
-            ax.plot(w[good] / 1e4, f[good], color="purple", lw=1,
-                    label="STIS G230L +5.6d", alpha=0.9)
+            ax.plot(
+                w[good] / 1e4, f[good], color="purple", lw=1, label="STIS G230L +5.6d", alpha=0.9
+            )
 
     # Plot grism spectra near +5d
     for m in merged:
         if abs(m["delta_t"] - 5) < 3:
             from scipy.ndimage import uniform_filter1d
+
             flux_smooth = uniform_filter1d(m["flux"], size=3)
             color = "C0" if m["grism"] == "G102" else "C1"
-            ax.plot(m["wavelength"] / 1e4, flux_smooth, color=color, lw=1,
-                    label=f"{m['grism']} +{m['delta_t']:.0f}d", alpha=0.9)
+            ax.plot(
+                m["wavelength"] / 1e4,
+                flux_smooth,
+                color=color,
+                lw=1,
+                label=f"{m['grism']} +{m['delta_t']:.0f}d",
+                alpha=0.9,
+            )
 
     # Load closest X-shooter
     xsh_dir = os.path.join(DATADIR, "AT2017gfo", "spectra", "xshooter")
@@ -428,10 +458,9 @@ def main():
         w_g, f_g = w[good], f[good]
         bs = max(1, len(w_g) // 500)
         n = len(w_g) // bs
-        w_b = w_g[:n*bs].reshape(n, bs).mean(axis=1)
-        f_b = f_g[:n*bs].reshape(n, bs).mean(axis=1)
-        ax.plot(w_b / 1e4, f_b, color="gray", lw=0.7, alpha=0.5,
-                label="X-shooter +6d (ground)")
+        w_b = w_g[: n * bs].reshape(n, bs).mean(axis=1)
+        f_b = f_g[: n * bs].reshape(n, bs).mean(axis=1)
+        ax.plot(w_b / 1e4, f_b, color="gray", lw=0.7, alpha=0.5, label="X-shooter +6d (ground)")
 
     ax.set_xlabel(r"Wavelength ($\mu$m)", fontsize=11)
     ax.set_ylabel(r"F$_\lambda$ (erg s$^{-1}$ cm$^{-2}$ $\AA^{-1}$)", fontsize=11)

@@ -11,10 +11,10 @@ Usage:
 """
 
 import os
-import sys
 import warnings
 import numpy as np
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -39,10 +39,20 @@ MJD_GW = 57982.529
 # G102: 0.8-1.15 um, ~24.5 A/pix, R~210 at 1.0 um
 # G141: 1.07-1.7 um, ~46.5 A/pix, R~130 at 1.4 um
 GRISM_PARAMS = {
-    "G102": {"wave_min": 7500, "wave_max": 11800, "disp": 24.5,
-             "ref_wave": 10000, "trace_offset": 0},
-    "G141": {"wave_min": 10500, "wave_max": 17500, "disp": 46.5,
-             "ref_wave": 14000, "trace_offset": 0},
+    "G102": {
+        "wave_min": 7500,
+        "wave_max": 11800,
+        "disp": 24.5,
+        "ref_wave": 10000,
+        "trace_offset": 0,
+    },
+    "G141": {
+        "wave_min": 10500,
+        "wave_max": 17500,
+        "disp": 46.5,
+        "ref_wave": 14000,
+        "trace_offset": 0,
+    },
 }
 
 
@@ -108,7 +118,10 @@ def simple_box_extraction(flt_path, ra, dec, box_half=3, bg_offset=15, bg_width=
         x_src, y_src = int(round(float(x_src))), int(round(float(y_src)))
 
         ny, nx = sci.shape
-        if not (50 < x_src < nx - 50 and box_half + bg_offset + bg_width < y_src < ny - box_half - bg_offset - bg_width):
+        if not (
+            50 < x_src < nx - 50
+            and box_half + bg_offset + bg_width < y_src < ny - box_half - bg_offset - bg_width
+        ):
             print(f"  {fname}: source at ({x_src},{y_src}) too close to edge")
             return None
 
@@ -160,8 +173,7 @@ def simple_box_extraction(flt_path, ra, dec, box_half=3, bg_offset=15, bg_width=
         wave = params["ref_wave"] + pix_offset * params["disp"]
 
         # Trim to valid wavelength range
-        valid = ((wave >= params["wave_min"]) & (wave <= params["wave_max"]) &
-                 np.isfinite(flux_net))
+        valid = (wave >= params["wave_min"]) & (wave <= params["wave_max"]) & np.isfinite(flux_net)
         if np.sum(valid) < 20:
             print(f"  {fname}: too few valid pixels ({np.sum(valid)})")
             return None
@@ -200,6 +212,7 @@ def try_grizli_extraction(grism_dir, ra, dec):
     try:
         from grizli import utils, model, fitting
         from grizli.prep import process_direct_grism_visit
+
         print("  grizli available - attempting full extraction...")
     except ImportError:
         print("  grizli not available, using simple box extraction")
@@ -250,9 +263,11 @@ def main():
             spec = simple_box_extraction(fpath, RA, DEC)
             if spec is not None:
                 spectra.append(spec)
-                print(f"  {spec['filename']}: {spec['grism']} "
-                      f"dt={spec['delta_t']:+.1f}d "
-                      f"x={spec['x_src']} y={spec['y_src']}")
+                print(
+                    f"  {spec['filename']}: {spec['grism']} "
+                    f"dt={spec['delta_t']:+.1f}d "
+                    f"x={spec['x_src']} y={spec['y_src']}"
+                )
         except Exception as e:
             print(f"  {os.path.basename(fpath)}: ERROR {e}")
 
@@ -281,27 +296,30 @@ def main():
         avg_flux = np.mean(fluxes, axis=0)
         avg_err = ref["flux_err"] / np.sqrt(len(specs))
 
-        merged.append({
-            "mjd": mjd_r,
-            "delta_t": mjd_r - MJD_GW,
-            "grism": grism,
-            "wavelength": wave,
-            "flux": avg_flux,
-            "flux_err": avg_err,
-            "n_combined": len(specs),
-        })
+        merged.append(
+            {
+                "mjd": mjd_r,
+                "delta_t": mjd_r - MJD_GW,
+                "grism": grism,
+                "wavelength": wave,
+                "flux": avg_flux,
+                "flux_err": avg_err,
+                "n_combined": len(specs),
+            }
+        )
 
     print(f"\nMerged to {len(merged)} unique epoch/grism combinations:")
     for m in merged:
-        print(f"  {m['grism']} dt={m['delta_t']:+.1f}d "
-              f"({m['n_combined']} exposures combined)")
+        print(f"  {m['grism']} dt={m['delta_t']:+.1f}d ({m['n_combined']} exposures combined)")
 
     # Plot
     fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharey=True)
 
     # Left: G102, Right: G141
-    for ax, grism, title in [(axes[0], "G102", "G102 (0.8-1.15 $\\mu$m)"),
-                              (axes[1], "G141", "G141 (1.1-1.7 $\\mu$m)")]:
+    for ax, grism, title in [
+        (axes[0], "G102", "G102 (0.8-1.15 $\\mu$m)"),
+        (axes[1], "G141", "G141 (1.1-1.7 $\\mu$m)"),
+    ]:
         grism_specs = [m for m in merged if m["grism"] == grism]
 
         if not grism_specs:
@@ -318,10 +336,12 @@ def main():
 
             # Smooth slightly
             from scipy.ndimage import uniform_filter1d
+
             flux_smooth = uniform_filter1d(m["flux"], size=5)
 
-            ax.plot(wave_um, flux_smooth, color=color, lw=1,
-                    label=f"+{m['delta_t']:.0f}d", alpha=0.9)
+            ax.plot(
+                wave_um, flux_smooth, color=color, lw=1, label=f"+{m['delta_t']:.0f}d", alpha=0.9
+            )
 
         ax.set_xlabel("Wavelength ($\\mu$m)", fontsize=11)
         ax.set_title(title, fontsize=11)
@@ -330,8 +350,7 @@ def main():
 
     axes[0].set_ylabel("Flux (e$^{-}$/s, uncalibrated)", fontsize=11)
 
-    fig.suptitle("AT2017gfo — WFC3/IR Grism Spectra (THATCH box extraction)",
-                 fontsize=12, y=1.02)
+    fig.suptitle("AT2017gfo — WFC3/IR Grism Spectra (THATCH box extraction)", fontsize=12, y=1.02)
     plt.tight_layout()
 
     outpath = os.path.join(FIGDIR, "AT2017gfo_grism_spectra.pdf")
@@ -347,6 +366,7 @@ def main():
     stis_path = os.path.join(DATADIR, "AT2017gfo", "spectra", "odp801010_x1d.fits")
     if os.path.exists(stis_path):
         from hustle_spectra import read_x1d_spectrum
+
         stis = read_x1d_spectrum(stis_path)
         if stis:
             w = stis["wavelength"] / 1e4
@@ -356,22 +376,28 @@ def main():
             pos = f[good] > 0
             if np.sum(pos) > 5:
                 f_norm = f[good] / np.max(f[good][pos])
-                ax.plot(w[good], f_norm, color="purple", lw=1,
-                        label="STIS G230L +5.6d", alpha=0.9)
+                ax.plot(w[good], f_norm, color="purple", lw=1, label="STIS G230L +5.6d", alpha=0.9)
 
     # Plot closest-epoch grism spectra
     for m in merged:
         if abs(m["delta_t"] - 5) < 2:  # near +5d
             wave_um = m["wavelength"] / 1e4
             from scipy.ndimage import uniform_filter1d
+
             flux_smooth = uniform_filter1d(m["flux"], size=5)
             # Normalize
             pos = flux_smooth > 0
             if np.sum(pos) > 10:
                 f_norm = flux_smooth / np.max(flux_smooth[pos])
                 color = "C0" if m["grism"] == "G102" else "C1"
-                ax.plot(wave_um, f_norm, color=color, lw=1,
-                        label=f"{m['grism']} +{m['delta_t']:.0f}d", alpha=0.9)
+                ax.plot(
+                    wave_um,
+                    f_norm,
+                    color=color,
+                    lw=1,
+                    label=f"{m['grism']} +{m['delta_t']:.0f}d",
+                    alpha=0.9,
+                )
 
     ax.set_xlabel("Wavelength ($\\mu$m)", fontsize=11)
     ax.set_ylabel("Normalized Flux", fontsize=11)

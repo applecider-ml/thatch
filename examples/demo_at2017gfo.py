@@ -20,9 +20,9 @@ from glob import glob
 import numpy as np
 import pandas as pd
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
@@ -61,16 +61,31 @@ MJD_DISCOVERY = 57982.529  # 2017-08-17 12:41:04 UTC
 # radius aperture. We divide by this to correct to total flux.
 APERTURE_CORRECTIONS = {
     # WFC3/UVIS (r=5px = 0.20"): EE ~ 0.80-0.85 depending on wavelength
-    "F225W": 0.800, "F275W": 0.810, "F336W": 0.830,
-    "F438W": 0.845, "F475W": 0.850, "F555W": 0.855,
-    "F600LP": 0.855, "F606W": 0.855, "F625W": 0.855,
-    "F775W": 0.850, "F814W": 0.845,
+    "F225W": 0.800,
+    "F275W": 0.810,
+    "F336W": 0.830,
+    "F438W": 0.845,
+    "F475W": 0.850,
+    "F555W": 0.855,
+    "F600LP": 0.855,
+    "F606W": 0.855,
+    "F625W": 0.855,
+    "F775W": 0.850,
+    "F814W": 0.845,
     # WFC3/IR (r=5px = 0.65"): EE ~ 0.93-0.96
-    "F105W": 0.945, "F110W": 0.950, "F125W": 0.950,
-    "F140W": 0.950, "F153M": 0.945, "F160W": 0.945,
+    "F105W": 0.945,
+    "F110W": 0.950,
+    "F125W": 0.950,
+    "F140W": 0.950,
+    "F153M": 0.945,
+    "F160W": 0.945,
     # ACS/WFC (r=5px = 0.25"): EE ~ 0.83-0.87
-    "F435W": 0.835, "F475W": 0.845, "F555W": 0.850,
-    "F606W": 0.855, "F625W": 0.855, "F775W": 0.850,
+    "F435W": 0.835,
+    "F475W": 0.845,
+    "F555W": 0.850,
+    "F606W": 0.855,
+    "F625W": 0.855,
+    "F775W": 0.850,
     "F814W": 0.845,
 }
 
@@ -81,9 +96,7 @@ def step1_query_mast():
     print("Step 1: Querying MAST for AT2017gfo HST observations")
     print("=" * 60)
 
-    obs_table = Observations.query_region(
-        COORD, radius=5.0 * u.arcsec
-    )
+    obs_table = Observations.query_region(COORD, radius=5.0 * u.arcsec)
 
     # Filter to HST imaging only
     hst_mask = obs_table["obs_collection"] == "HST"
@@ -134,10 +147,12 @@ def step2_get_products(obs_table, max_download=50):
 
     # Filter to calibrated drizzled images only
     # _drz.fits or _drc.fits are the final combined products
-    drz_mask = np.array([
-        any(ext in str(pn) for ext in ["_drz.fits", "_drc.fits"])
-        for pn in products["productFilename"]
-    ])
+    drz_mask = np.array(
+        [
+            any(ext in str(pn) for ext in ["_drz.fits", "_drc.fits"])
+            for pn in products["productFilename"]
+        ]
+    )
     # Also want minimum recommended products
     mrp_mask = products["productGroupDescription"] == "Minimum Recommended Products"
 
@@ -147,10 +162,9 @@ def step2_get_products(obs_table, max_download=50):
 
     if len(drz_products) == 0:
         print("  No drizzled products found. Trying _flt.fits instead...")
-        flt_mask = np.array([
-            "_flt.fits" in str(pn) or "_flc.fits" in str(pn)
-            for pn in products["productFilename"]
-        ])
+        flt_mask = np.array(
+            ["_flt.fits" in str(pn) or "_flc.fits" in str(pn) for pn in products["productFilename"]]
+        )
         drz_products = products[flt_mask]
 
     print(f"  Found {len(drz_products)} calibrated image products")
@@ -168,7 +182,11 @@ def step2_get_products(obs_table, max_download=50):
         flat=True,  # Put all files in one directory
     )
 
-    downloaded = [str(f) for f in manifest["Local Path"] if "COMPLETE" in str(manifest["Status"][manifest["Local Path"] == f])]
+    downloaded = [
+        str(f)
+        for f in manifest["Local Path"]
+        if "COMPLETE" in str(manifest["Status"][manifest["Local Path"] == f])
+    ]
     print(f"  Successfully downloaded {len(manifest)} files")
 
     return manifest
@@ -183,9 +201,11 @@ def step3_extract_photometry():
     # Find all downloaded FITS files
     fits_files = glob(os.path.join(DATADIR, "**", "*.fits"), recursive=True)
     # Filter to drz/drc/flt/flc
-    fits_files = [f for f in fits_files if any(
-        ext in f for ext in ["_drz.fits", "_drc.fits", "_flt.fits", "_flc.fits"]
-    )]
+    fits_files = [
+        f
+        for f in fits_files
+        if any(ext in f for ext in ["_drz.fits", "_drc.fits", "_flt.fits", "_flc.fits"])
+    ]
 
     print(f"  Found {len(fits_files)} FITS files to process")
 
@@ -199,8 +219,10 @@ def step3_extract_photometry():
                 sci_ext = None
                 for i, hdu in enumerate(hdul):
                     if hdu.name == "SCI" or (
-                        hasattr(hdu, "data") and hdu.data is not None
-                        and hdu.data.ndim == 2 and i > 0
+                        hasattr(hdu, "data")
+                        and hdu.data is not None
+                        and hdu.data.ndim == 2
+                        and i > 0
                     ):
                         sci_ext = i
                         break
@@ -228,23 +250,21 @@ def step3_extract_photometry():
                 filt2 = header.get("FILTER2", pri_header.get("FILTER2", ""))
                 if filt in ["CLEAR1L", "CLEAR1S", "CLEAR", "N/A"] and filt2:
                     filt = filt2
-                if filt2 and filt2 not in ["CLEAR2L", "CLEAR2S", "CLEAR", "N/A", ""] and filt2 != filt:
+                if (
+                    filt2
+                    and filt2 not in ["CLEAR2L", "CLEAR2S", "CLEAR", "N/A", ""]
+                    and filt2 != filt
+                ):
                     # For ACS, the filter might be in FILTER1 or FILTER2
                     if "CLEAR" in str(filt):
                         filt = filt2
 
-                instrument = (
-                    pri_header.get("INSTRUME", "")
-                    + "/"
-                    + pri_header.get("DETECTOR", "")
-                )
+                instrument = pri_header.get("INSTRUME", "") + "/" + pri_header.get("DETECTOR", "")
 
                 # Get observation time
                 date_obs = pri_header.get("DATE-OBS", header.get("DATE-OBS"))
                 time_obs = pri_header.get("TIME-OBS", header.get("TIME-OBS", "00:00:00"))
-                exptime = float(
-                    header.get("EXPTIME", pri_header.get("EXPTIME", 1.0))
-                )
+                exptime = float(header.get("EXPTIME", pri_header.get("EXPTIME", 1.0)))
 
                 if date_obs is None:
                     continue
@@ -269,15 +289,9 @@ def step3_extract_photometry():
                     continue
 
                 # Get photometric calibration from header
-                photflam = float(
-                    header.get("PHOTFLAM", pri_header.get("PHOTFLAM", 0))
-                )
-                photplam = float(
-                    header.get("PHOTPLAM", pri_header.get("PHOTPLAM", 0))
-                )
-                photzpt = float(
-                    header.get("PHOTZPT", pri_header.get("PHOTZPT", -21.1))
-                )
+                photflam = float(header.get("PHOTFLAM", pri_header.get("PHOTFLAM", 0)))
+                photplam = float(header.get("PHOTPLAM", pri_header.get("PHOTPLAM", 0)))
+                photzpt = float(header.get("PHOTZPT", pri_header.get("PHOTZPT", -21.1)))
 
                 # Aperture photometry
                 # Use a simple circular aperture (radius=5 pixels)
@@ -308,8 +322,7 @@ def step3_extract_photometry():
                 # Source flux (background-subtracted)
                 src_flux = np.sum(data[valid_ap]) - bg_median * np.sum(valid_ap)
                 src_flux_err = np.sqrt(
-                    np.sum(valid_ap) * bg_std ** 2
-                    + np.abs(src_flux)  # Poisson noise (approximate)
+                    np.sum(valid_ap) * bg_std**2 + np.abs(src_flux)  # Poisson noise (approximate)
                 )
 
                 # Convert to count rate (electrons/sec)
@@ -349,7 +362,9 @@ def step3_extract_photometry():
                 elif count_rate > 0:
                     # No PHOTFLAM; use instrumental magnitude
                     abmag = -2.5 * np.log10(count_rate) + 25.0  # rough zeropoint
-                    mag_err = 2.5 / np.log(10) * count_rate_err / count_rate if count_rate_err > 0 else 0
+                    mag_err = (
+                        2.5 / np.log(10) * count_rate_err / count_rate if count_rate_err > 0 else 0
+                    )
                 else:
                     abmag = np.nan
                     mag_err = np.nan
@@ -439,8 +454,9 @@ def step4_plot_lightcurve(df):
         "F502N": "#98df8a",
     }
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True,
-                                    gridspec_kw={"height_ratios": [3, 1]})
+    fig, (ax1, ax2) = plt.subplots(
+        2, 1, figsize=(10, 8), sharex=True, gridspec_kw={"height_ratios": [3, 1]}
+    )
 
     # Group by filter
     for filt, group in df_good.groupby("filter"):
@@ -524,10 +540,17 @@ def step4_plot_lightcurve(df):
 def plot_count_rates(df):
     """Fallback: plot count rates if mag calibration failed."""
     filter_colors = {
-        "F606W": "#1f77b4", "F475W": "#2ca02c", "F625W": "#ff7f0e",
-        "F775W": "#d62728", "F814W": "#9467bd", "F850LP": "#8c564b",
-        "F110W": "#e377c2", "F140W": "#7f7f7f", "F160W": "#bcbd22",
-        "F336W": "#17becf", "F275W": "#aec7e8",
+        "F606W": "#1f77b4",
+        "F475W": "#2ca02c",
+        "F625W": "#ff7f0e",
+        "F775W": "#d62728",
+        "F814W": "#9467bd",
+        "F850LP": "#8c564b",
+        "F110W": "#e377c2",
+        "F140W": "#7f7f7f",
+        "F160W": "#bcbd22",
+        "F336W": "#17becf",
+        "F275W": "#aec7e8",
     }
 
     good = df[df["count_rate"] > 0].copy()
@@ -586,7 +609,9 @@ def main():
     if df is not None:
         print(f"  Photometric measurements: {len(df)}")
         print(f"  Filters: {sorted(df['filter'].unique())}")
-        print(f"  Time range: {df['delta_t_days'].min():.1f} to {df['delta_t_days'].max():.1f} days")
+        print(
+            f"  Time range: {df['delta_t_days'].min():.1f} to {df['delta_t_days'].max():.1f} days"
+        )
         print(f"  Data: {DATADIR}/AT2017gfo_photometry.csv")
     print(f"  Figures: {FIGDIR}/")
 
