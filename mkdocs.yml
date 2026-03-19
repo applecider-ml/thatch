@@ -50,6 +50,7 @@ nav:
   - Examples:
     - AT2017gfo (Kilonova): examples/at2017gfo.md
     - SN 2011fe (Type Ia): examples/sn2011fe.md
+    - SN 2023ixf (Type II): examples/sn2023ixf.md
     - Batch Processing: examples/batch.md
   - API Reference:
     - thatch.crossmatch: api/crossmatch.md
