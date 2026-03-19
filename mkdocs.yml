@@ -1,0 +1,86 @@
+site_name: THATCH
+site_url: https://applecider-ml.github.io/thatch/
+repo_url: https://github.com/applecider-ml/thatch
+repo_name: thatch
+site_description: Transient Harvester for Archival Training and Classification from Hubble
+site_author: Michael Coughlin
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+  - Pipeline:
+    - Overview: pipeline/overview.md
+    - Cross-Matching: pipeline/crossmatch.md
+    - Photometry: pipeline/photometry.md
+    - Spectroscopy: pipeline/spectroscopy.md
+    - Cutouts: pipeline/cutouts.md
+    - Catalog: pipeline/catalog.md
+  - Examples:
+    - AT2017gfo (Kilonova): examples/at2017gfo.md
+    - SN 2011fe (Type Ia): examples/sn2011fe.md
+    - Batch Processing: examples/batch.md
+  - API Reference:
+    - thatch.crossmatch: api/crossmatch.md
+    - thatch.photometry: api/photometry.md
+    - thatch.spectra: api/spectra.md
+    - thatch.cutouts: api/cutouts.md
+    - thatch.catalog: api/catalog.md
+    - thatch.tracker: api/tracker.md
+    - thatch.data: api/data.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+
+plugins:
+  - search
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js

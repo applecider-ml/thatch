@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thatch"
+dynamic = ["version"]
+description = "Transient Harvester for Archival Training and Classification from Hubble"
+readme = "README.md"
+license = {text = "BSD-3-Clause"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Michael Coughlin"},
+]
+dependencies = [
+    "numpy",
+    "pandas",
+    "astropy",
+    "astroquery",
+    "matplotlib",
+    "scipy",
+    "photutils",
+]
+
+[project.optional-dependencies]
+grism = ["grizli"]
+ml = ["scikit-learn", "torch"]
+hf = ["huggingface_hub", "pyarrow"]
+all = ["thatch[grism,ml,hf]"]
+dev = ["pytest", "ruff"]
+
+[project.scripts]
+thatch = "thatch.cli:main"
+thatch-harvest = "thatch.harvest:main"
+thatch-spectra = "thatch.spectra:main"
+thatch-crossmatch = "thatch.crossmatch:main"
+
+[tool.setuptools_scm]
+
+[tool.ruff]
+line-length = 100

@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.eggs/
+*.fits
+*.csv
+*.hdf5
+*.parquet
+data/
+Figures/
+*.pdf
+*.png
+site/
+.DS_Store
