@@ -2,6 +2,12 @@
 
 **Transient Harvester for Archival Training and Classification from Hubble**
 
+[![CI](https://github.com/applecider-ml/thatch/actions/workflows/ci.yml/badge.svg)](https://github.com/applecider-ml/thatch/actions/workflows/ci.yml)
+[![Docs](https://github.com/applecider-ml/thatch/actions/workflows/docs.yml/badge.svg)](https://applecider-ml.github.io/thatch/)
+[![Dataset](https://img.shields.io/badge/HuggingFace-Dataset-yellow)](https://huggingface.co/datasets/applecider-ml/thatch)
+
+**[Documentation](https://applecider-ml.github.io/thatch/)** | **[Dataset](https://huggingface.co/datasets/applecider-ml/thatch)** | **[Paper (in prep)]()**
+
 THATCH is an open-source pipeline for extracting ML-ready transient light curves, image cutouts, and spectra from the Hubble Space Telescope archive. It bridges the domain gap between ground-based surveys (ZTF, Rubin/LSST) and space-based missions (Roman) by providing empirical space-based training data for transient classifiers.
 
 ## Features

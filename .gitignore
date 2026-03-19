@@ -11,6 +11,5 @@ build/
 data/
 Figures/
 *.pdf
-*.png
 site/
 .DS_Store

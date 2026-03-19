@@ -173,8 +173,8 @@ KNOWN_TRANSIENTS = [
     },
     {
         "name": "SN2023ixf",
-        "ra": 210.41050,
-        "dec": 54.31640,
+        "ra": 210.91075,
+        "dec": 54.31169,
         "type": "SN II",
         "z": 0.001,
         "discovery_mjd": 60083.0,
