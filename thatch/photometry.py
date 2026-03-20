@@ -298,11 +298,19 @@ def compute_abmag(rate, rate_err, photflam, photplam, photzpt):
     return abmag, magerr
 
 
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB — skip HAP mosaics
+
+
 def measure_one_image(fpath, coord):
     """Run aperture photometry on one FITS image at the given sky coordinate.
     Returns a dict of measurements or None on failure.
     """
     fname = os.path.basename(fpath)
+
+    # Skip oversized HAP mosaic images
+    if os.path.getsize(fpath) > MAX_FILE_SIZE:
+        return None
+
     with fits.open(fpath) as hdul:
         # Find SCI extension
         sci_ext = None
