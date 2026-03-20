@@ -86,6 +86,26 @@ def build_catalog(data_dir, objects=None):
         if col not in catalog.columns:
             catalog[col] = np.nan
 
+    # Fill missing delta_t_days from reference epochs if available
+    xmatch_path = os.path.join(data_dir, "thatch_hst_transients.csv")
+    if os.path.exists(xmatch_path):
+        xmatch = pd.read_csv(xmatch_path)
+        ref_epochs = {
+            row["name"]: row["discovery_mjd"]
+            for _, row in xmatch.iterrows()
+            if pd.notna(row.get("discovery_mjd"))
+        }
+        mask = catalog["delta_t_days"].isna() & catalog["mjd"].notna()
+        for idx in catalog[mask].index:
+            obj = catalog.loc[idx, "object"]
+            mjd = catalog.loc[idx, "mjd"]
+            if obj in ref_epochs and pd.notna(ref_epochs[obj]):
+                catalog.loc[idx, "delta_t_days"] = mjd - ref_epochs[obj]
+            else:
+                # Fallback: days from earliest observation of this object
+                obj_mjds = catalog.loc[catalog["object"] == obj, "mjd"]
+                catalog.loc[idx, "delta_t_days"] = mjd - obj_mjds.min()
+
     # Keep standard columns plus any extras
     cols = STANDARD_COLUMNS + [c for c in catalog.columns if c not in STANDARD_COLUMNS]
     return catalog[cols]
